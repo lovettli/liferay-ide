@@ -1,0 +1,186 @@
+/*******************************************************************************
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ *******************************************************************************/
+
+package com.liferay.ide.gradle.ui;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.eclipse.buildship.core.CorePlugin;
+import org.eclipse.buildship.core.configuration.ProjectConfiguration;
+import org.eclipse.buildship.core.launch.GradleRunConfigurationAttributes;
+import org.eclipse.buildship.core.util.file.FileUtils;
+import org.eclipse.buildship.core.util.variable.ExpressionUtils;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.debug.core.ILaunchConfiguration;
+import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
+import org.eclipse.debug.core.ILaunchManager;
+import org.eclipse.jface.action.IAction;
+import org.eclipse.jface.viewers.IStructuredSelection;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.gradleware.tooling.toolingclient.GradleDistribution;
+import com.gradleware.tooling.toolingmodel.repository.FixedRequestAttributes;
+import com.liferay.ide.project.ui.ProjectUI;
+import com.liferay.ide.ui.action.AbstractObjectAction;
+
+/**
+ * @author Andy Wu
+ */
+public abstract class GradleTaskAction extends AbstractObjectAction
+{
+
+    public GradleTaskAction()
+    {
+        super();
+    }
+
+    protected abstract String getGradleTask();
+
+    public void run( IAction action )
+    {
+        if( fSelection instanceof IStructuredSelection )
+        {
+            Object[] elems = ( (IStructuredSelection) fSelection ).toArray();
+
+            IFile gradleBuildFile = null;
+            IProject project = null;
+
+            Object elem = elems[0];
+
+            if( elem instanceof IFile )
+            {
+                gradleBuildFile = (IFile) elem;
+                project = gradleBuildFile.getProject();
+            }
+            else if( elem instanceof IProject )
+            {
+                project = (IProject) elem;
+                gradleBuildFile = project.getFile( "build.gradle" );
+            }
+
+            if( gradleBuildFile.exists() )
+            {
+                final IProject p = project;
+                final IFile gradleBuildFileTemp = gradleBuildFile;
+
+                final Job job = new Job( p.getName() + " - " + getGradleTask() ) //$NON-NLS-1$
+                {
+                    @Override
+                    protected IStatus run( IProgressMonitor monitor )
+                    {
+                        try
+                        {
+                            monitor.beginTask( getGradleTask(), 100 );
+
+                            //runMavenGoal( pomXmlFile, getGradleTask(), monitor );
+                            runGradleTask(gradleBuildFileTemp, getGradleTask(), monitor);
+
+                            monitor.worked( 80 );
+
+                            p.refreshLocal( IResource.DEPTH_INFINITE, monitor );
+
+                            monitor.worked( 10 );
+
+                            updateProject( p, monitor );
+
+                            monitor.worked( 10 );
+                        }
+                        catch( Exception e )
+                        {
+                            return ProjectUI.createErrorStatus( "Error running Maven goal " + getGradleTask(), e ); //$NON-NLS-1$
+                        }
+
+                        return Status.OK_STATUS;
+                    }
+                };
+
+                job.schedule();
+                System.out.println("=-======-----------------------gradle--------");
+            }
+        }
+    }
+
+    private void runGradleTask( IFile gradleBuildFile, String task, IProgressMonitor monitor ) throws CoreException
+    {
+        ILaunchConfiguration launchConfiguration =
+                        CorePlugin.gradleLaunchConfigurationManager().getOrCreateRunConfiguration( getRunConfigurationAttributes(gradleBuildFile) );
+
+        final ILaunchConfigurationWorkingCopy launchConfigurationWC = launchConfiguration.getWorkingCopy();
+
+        launchConfigurationWC.setAttribute( "org.eclipse.debug.ui.ATTR_LAUNCH_IN_BACKGROUND", true );
+        launchConfigurationWC.setAttribute( "org.eclipse.debug.ui.ATTR_CAPTURE_IN_CONSOLE", true );
+        launchConfigurationWC.setAttribute( "org.eclipse.debug.ui.ATTR_PRIVATE", true );
+
+        launchConfigurationWC.doSave();
+
+        launchConfigurationWC.launch( ILaunchManager.RUN_MODE, monitor );
+    }
+
+    protected void updateProject( IProject p, IProgressMonitor monitor )
+    {
+        try
+        {
+            p.refreshLocal( IResource.DEPTH_INFINITE, monitor );
+        }
+        catch( CoreException e )
+        {
+            LRGradleUI.logError( "Error refreshing project after " + getGradleTask(), e );
+        }
+    }
+    
+    private GradleRunConfigurationAttributes getRunConfigurationAttributes(IFile gradleBuildFile)
+    {
+        ProjectConfiguration projectConfiguration =
+            CorePlugin.projectConfigurationManager().readProjectConfiguration( gradleBuildFile.getProject() );
+
+        Optional<FixedRequestAttributes> requestAttributes = Optional.of( projectConfiguration.getRequestAttributes() );
+
+        List<String> tasks = new ArrayList<String>();
+        tasks.add( getGradleTask() );
+
+        String projectDirectoryExpression = ExpressionUtils.encodeWorkspaceLocation( gradleBuildFile.getProject() );
+
+        boolean isPresent = requestAttributes.isPresent();
+
+        GradleDistribution gradleDistribution =
+            isPresent ? requestAttributes.get().getGradleDistribution() : GradleDistribution.fromBuild();
+
+        String gradleUserHome =
+            isPresent ? FileUtils.getAbsolutePath( requestAttributes.get().getGradleUserHome() ).orNull() : null;
+
+        String javaHome =
+            isPresent ? FileUtils.getAbsolutePath( requestAttributes.get().getJavaHome() ).orNull() : null;
+
+        List<String> jvmArguments = isPresent ? requestAttributes.get().getJvmArguments() : ImmutableList.<String> of();
+        List<String> arguments = isPresent ? requestAttributes.get().getArguments() : ImmutableList.<String> of();
+
+        boolean showExecutionView = true;
+        boolean showConsoleView = true;
+
+        return GradleRunConfigurationAttributes.with(
+            tasks, projectDirectoryExpression, gradleDistribution, gradleUserHome, javaHome, jvmArguments, arguments,
+            showExecutionView, showConsoleView );
+    }
+
+}

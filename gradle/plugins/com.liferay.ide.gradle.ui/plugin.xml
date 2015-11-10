@@ -1,5 +1,49 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin>
-   
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            adaptable="true"
+            id="com.liferay.ide.ui.popupmenu"
+            objectClass="org.eclipse.core.resources.IResource">
+         <menu
+               icon="icons/e16/liferay.png"
+               id="liferayPopupMenuCategory"
+               label="%liferay.menu.label">
+            <separator
+                  name="slot1">
+            </separator>
+            <groupMarker
+                  name="gradle">
+            </groupMarker>
+         </menu>
+         <menu
+               icon="icons/e16/buildship.png"
+               id="liferayPopupMenuGradleCategory"
+               label="%gradle.menu.label"
+               path="liferayPopupMenuCategory/gradle">
+            <groupMarker
+                  name="build-service">
+            </groupMarker>
+         </menu>
+      </objectContribution>
+      <objectContribution
+            adaptable="true"
+            id="com.liferay.ide.gradle.ui.gradle.popup"
+            objectClass="org.eclipse.core.resources.IResource">
+         <action
+               class="com.liferay.ide.gradle.ui.GradleBuildServiceTaskAction"
+               enablesFor="1"
+               icon="icons/e16/buildship.png"
+               id="com.liferay.ide.gradle.popup.action.build-service"
+               label="liferay:build-service"
+               menubarPath="liferayPopupMenuCategory/liferayPopupMenuGradleCategory/build-service">
+         </action>
+         <enablement>
+               <adapt type="org.eclipse.core.resources.IResource">
+               </adapt>
+         </enablement>
+      </objectContribution>
+  </extension>
 </plugin>
