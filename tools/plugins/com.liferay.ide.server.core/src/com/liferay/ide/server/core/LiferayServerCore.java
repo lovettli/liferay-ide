@@ -22,6 +22,7 @@ import com.liferay.ide.sdk.core.ISDKListener;
 import com.liferay.ide.sdk.core.SDKManager;
 import com.liferay.ide.server.core.portal.AbstractPortalBundleFactory;
 import com.liferay.ide.server.core.portal.BundleDeployer;
+import com.liferay.ide.server.core.portal.PortalBundle;
 import com.liferay.ide.server.core.portal.PortalBundleFactory;
 import com.liferay.ide.server.core.portal.PortalRuntime;
 import com.liferay.ide.server.remote.IRemoteServer;
@@ -272,6 +273,26 @@ public class LiferayServerCore extends Plugin
         }
 
         return pluginPublishers;
+    }
+
+    public static PortalBundle getPortalBundle( final IPath bundlePath )
+    {
+        PortalBundleFactory[] factories = getPortalBundleFactories();
+
+        if( factories != null )
+        {
+            for( PortalBundleFactory portalBundleFactory : factories )
+            {
+                IPath path = portalBundleFactory.canCreateFromPath( bundlePath );
+
+                if( path != null )
+                {
+                    return portalBundleFactory.create( path );
+                }
+            }
+        }
+
+        return null;
     }
 
     public static PortalBundleFactory[] getPortalBundleFactories()
