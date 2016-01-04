@@ -60,13 +60,13 @@ public class NewLiferayPluginProjectOp623Tests extends NewLiferayPluginProjectOp
     @Override
     protected IPath getLiferayRuntimeDir()
     {
-        return ProjectCore.getDefault().getStateLocation().append( "liferay-portal-6.2.0-ce-ga1/tomcat-7.0.42" );
+        return ProjectCore.getDefault().getStateLocation().append( "liferay-portal-6.2-ce-ga4/tomcat-7.0.42" );
     }
 
     @Override
     protected IPath getLiferayRuntimeZip()
     {
-        return getLiferayBundlesPath().append( "liferay-portal-tomcat-6.2.0-ce-ga1-20131101192857659.zip" );
+        return getLiferayBundlesPath().append( "liferay-portal-tomcat-6.2-ce-ga4-20150416163831865.zip" );
     }
 
     @Override
@@ -89,6 +89,7 @@ public class NewLiferayPluginProjectOp623Tests extends NewLiferayPluginProjectOp
 
     @Override
     @Test
+    @Ignore
     public void testLocationListener() throws Exception
     {
         if( shouldSkipBundleTests() ) return;

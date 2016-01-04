@@ -72,10 +72,11 @@ public class GroupIdDefaultValueService extends DefaultValueService
         final IScopeContext[] prefContexts = { DefaultScope.INSTANCE, InstanceScope.INSTANCE };
         final String defaultMavenGroupId =
             Platform.getPreferencesService().getString(
-                ProjectCore.PLUGIN_ID, ProjectCore.PREF_DEFAULT_PROJECT_MAVEN_GROUPID, null, prefContexts );
+                ProjectCore.PLUGIN_ID, ProjectCore.PREF_DEFAULT_PLUGIN_PROJECT_MAVEN_GROUPID, null, prefContexts );
         return defaultMavenGroupId;
     }
 
+    @Override
     protected void initDefaultValueService()
     {
         super.initDefaultValueService();

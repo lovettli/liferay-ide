@@ -1,199 +1,143 @@
+/*******************************************************************************
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ *******************************************************************************/
 package com.liferay.ide.server.core.portal;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URL;
 import java.util.Set;
+import java.util.jar.JarInputStream;
 
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
-import javax.management.openmbean.CompositeData;
-import javax.management.openmbean.TabularData;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
 
 import org.osgi.framework.dto.BundleDTO;
+
 
 /**
  * @author Gregory Amerson
  */
-public class BundleDeployer {
+public class BundleDeployer extends JMXBundleDeployer
+{
 
-    private final String _framework = ":type=framework,*";
-    private String _mBeanRegex = "osgi.core";
+    private final static String OBJECTNAME = "osgi.core";
 
-    private MBeanServerConnection _mBeanServerConnection;
-
-    public BundleDeployer() {
-        this(null, -1);
+    public BundleDeployer( int jmxRemotePort )
+    {
+        super( jmxRemotePort );
     }
 
-    public BundleDeployer(int port) {
-        this("service:jmx:rmi:///jndi/rmi://:" + port + "/jmxrmi");
-    }
+    /**
+     * Gets the current list of installed bsns, compares it to the bsn provided.
+     * If bsn doesn't exist, then install it. If it does exist then update it.
+     *
+     * @param bsn
+     *            Bundle-SymbolicName of bundle you are wanting to deploy
+     * @param bundle
+     *            the bundle
+     * @return the id of the updated or installed bundle
+     * @throws Exception
+     */
+    public long deploy(String bsn, String bundleUrl) throws Exception {
+        MBeanServerConnection connection = mBeanServerConnection;
 
-    public BundleDeployer(String serviceURL) {
-        try {
-            final JMXServiceURL jmxServiceUrl = new JMXServiceURL(serviceURL);
-            final JMXConnector jmxConnector = JMXConnectorFactory.connect(
-                jmxServiceUrl, null);
-
-            _mBeanServerConnection = jmxConnector.getMBeanServerConnection();
-        } catch (Exception e) {
-            throw new IllegalArgumentException(
-                "Unable to get JMX connection", e);
-        }
-    }
-
-    public BundleDeployer(String mBeanRegex, int port) {
-        this(port);
-        _mBeanRegex = mBeanRegex;
-    }
-
-    public BundleDeployer(String mBeanRegex, String serviceURL) {
-        this(serviceURL);
-        _mBeanRegex = mBeanRegex;
-    }
-
-    public long deployBundle(String bsn, File bundle) throws Exception {
-        final ObjectName framework = getFramework(_mBeanServerConnection);
+        final ObjectName framework = getFramework(connection);
 
         long bundleId = -1;
 
-        for (BundleDTO BundleDTO : listBundles()) {
-            if (BundleDTO.symbolicName.equals(bsn)) {
-                bundleId = BundleDTO.id;
+        for (BundleDTO osgiBundle : listBundles()) {
+            if (osgiBundle.symbolicName.equals(bsn)) {
+                bundleId = osgiBundle.id;
                 break;
             }
         }
 
-        if (bundleId > -1) {
-            _mBeanServerConnection.invoke(framework, "stopBundle",
-                    new Object[] { bundleId }, new String[] { "long" });
+        boolean isFragment = false;
 
-            _mBeanServerConnection.invoke(framework, "updateBundleFromURL",
+        if( !bundleUrl.contains( "webbundle:" ) )
+        {
+            final File bundleFile = new File( new URL( bundleUrl ).toURI() );
+
+            try ( JarInputStream jarStream = new JarInputStream( new FileInputStream( bundleFile ) ) ) {
+                isFragment = jarStream.getManifest().getMainAttributes().getValue( "Fragment-Host" ) != null;
+            }
+            catch( Exception e ) {
+            }
+        }
+
+        // TODO serve bundle url over http so it works for non file:// urls
+
+        if (bundleId > -1) {
+            if (!isFragment) {
+                connection.invoke(framework, "stopBundle",
+                        new Object[] { bundleId }, new String[] { "long" });
+            }
+
+            connection.invoke(framework, "updateBundleFromURL",
                     new Object[] { bundleId,
-                    bundle.toURI().toURL().toExternalForm() },
+                    bundleUrl },
                     new String[] { "long", String.class.getName() });
 
-            _mBeanServerConnection.invoke(framework, "refreshBundle",
+            connection.invoke(framework, "refreshBundle",
                     new Object[] { bundleId }, new String[] { "long" });
         } else {
-            Object installed = _mBeanServerConnection.invoke(
+            Object installed = connection.invoke(
                     framework,
                     "installBundleFromURL",
-                    new Object[] { bundle.getAbsolutePath(),
-                            bundle.toURI().toURL().toExternalForm() },
+                    new Object[] { bundleUrl, bundleUrl },
                     new String[] { String.class.getName(),
                             String.class.getName() });
 
             bundleId = Long.parseLong(installed.toString());
         }
 
-        _mBeanServerConnection.invoke(framework, "startBundle",
-            new Object[] { bundleId }, new String[] { "long" });
+        if( !isFragment ) {
+            connection.invoke(framework, "startBundle",
+                new Object[] { bundleId }, new String[] { "long" });
+        }
 
         return bundleId;
     }
 
-    private ObjectName getBundleState()
-        throws MalformedObjectNameException, IOException {
+    private static ObjectName getFramework( MBeanServerConnection mBeanServerConnection )
+        throws MalformedObjectNameException, IOException
+    {
+        final ObjectName objectName = new ObjectName( OBJECTNAME + ":type=framework,*" );
+        final Set<ObjectName> objectNames = mBeanServerConnection.queryNames( objectName, null );
 
-        return _mBeanServerConnection
-            .queryNames(new ObjectName(_mBeanRegex + ":type=bundleState,*"),
-                null).iterator().next();
-    }
-
-    private ObjectName getFramework(
-            MBeanServerConnection mBeanServerConnection)
-        throws MalformedObjectNameException, IOException {
-
-        final Set<ObjectName> objectNames =
-            mBeanServerConnection.queryNames(
-                new ObjectName(_mBeanRegex + _framework), null);
-
-        if (objectNames != null && objectNames.size() > 0) {
+        if( objectNames != null && objectNames.size() > 0 )
+        {
             return objectNames.iterator().next();
         }
 
         return null;
     }
 
-    public BundleDTO[] listBundles() {
-        final List<BundleDTO> retval = new ArrayList<BundleDTO>();
-
-        try {
-            final ObjectName bundleState = getBundleState();
-
-            final Object[] params = new Object[] {
-                new String[] {
-                    "Identifier",
-                    "SymbolicName",
-                    "State",
-                    "Version",
-                }
-            };
-
-            final String[] signature = new String[] {
-                String[].class.getName()
-            };
-
-            final TabularData data = (TabularData) _mBeanServerConnection
-                    .invoke(bundleState, "listBundles", params, signature);
-
-            for (Object value : data.values()) {
-                final CompositeData cd = (CompositeData) value;
-
-                try {
-                    retval.add(newFromData(cd));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+    public boolean ping()
+    {
+        try
+        {
+            return mBeanServerConnection != null &&
+                            mBeanServerConnection.queryNames( new ObjectName( "osgi.core:type=bundleState,*" ), null ) != null;
         }
-
-        return retval.toArray(new BundleDTO[0]);
-    }
-
-    private static BundleDTO newFromData(CompositeData cd) {
-        final BundleDTO bundle = new BundleDTO();
-        bundle.id = Long.parseLong(cd.get("Identifier").toString());
-        bundle.symbolicName = cd.get("SymbolicName").toString();
-
-        return bundle;
-    }
-
-    public void uninstallBundle(String bsn) throws Exception {
-        for (BundleDTO BundleDTO : listBundles()) {
-            if (BundleDTO.symbolicName.equals(bsn)) {
-                uninstallBundle(BundleDTO.id);
-
-                return;
-            }
-        }
-
-        throw new IllegalStateException("Unable to uninstall " + bsn);
-    }
-
-    public void uninstallBundle( long id ) throws Exception {
-        final ObjectName framework = getFramework(_mBeanServerConnection);
-
-        _mBeanServerConnection.invoke( framework, "uninstallBundle",
-            new Object[] { id }, new String[] { "long" } );
-    }
-
-    public boolean ping() {
-        try {
-            return _mBeanServerConnection != null &&
-                _mBeanServerConnection.queryNames( new ObjectName( "osgi.core:type=bundleState,*" ), null ) != null;
-        }
-        catch( Exception e ) {
+        catch( Exception e )
+        {
             return false;
         }
     }
+
 }

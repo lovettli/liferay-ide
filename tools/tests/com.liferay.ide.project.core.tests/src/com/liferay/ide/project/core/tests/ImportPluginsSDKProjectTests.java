@@ -53,23 +53,9 @@ import org.junit.Test;
 public class ImportPluginsSDKProjectTests extends ProjectCoreBase
 {
     @AfterClass
-    public static void removePluginsSDK()
+    public static void removePluginsSDK() throws Exception
     {
-        IProject[] projects = CoreUtil.getAllProjects();
-        for( IProject iProject : projects )
-        {
-            if ( iProject != null && iProject.isAccessible() && iProject.exists())
-            {
-                try
-                {
-                    iProject.delete( true, true, new NullProgressMonitor() );
-                }
-                catch( CoreException e )
-                {
-                    e.printStackTrace();
-                }
-            }
-        }
+        deleteAllWorkspaceProjects();
     }
 
     private boolean isLiferayRuntimePluginClassPath(List<IClasspathEntry> entries, final String entryPath)
@@ -136,7 +122,7 @@ public class ImportPluginsSDKProjectTests extends ProjectCoreBase
     public void testSDKSetting() throws Exception
     {
         SDK sdk = SDKUtil.getWorkspaceSDK();
-        Map<String, Object> sdkProperties = sdk.getBuildProperties();
+        Map<String, Object> sdkProperties = sdk.getBuildProperties(true);
 
         assertNotNull( sdkProperties.get( "app.server.type" ) );
         assertNotNull( sdkProperties.get( "app.server.dir" ) );

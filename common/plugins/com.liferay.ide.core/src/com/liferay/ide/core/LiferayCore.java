@@ -46,8 +46,6 @@ public class LiferayCore extends Plugin
     // The plugin ID
     public static final String PLUGIN_ID = "com.liferay.ide.core";
 
-    public static final String NATURE_ID = PLUGIN_ID + ".liferayNature";
-
     private static LiferayProjectProviderReader providerReader;
 
     public static ILiferayProject create( Object adaptable )
@@ -189,6 +187,16 @@ public class LiferayCore extends Plugin
         }
 
         return providerReader.getProviders();
+    }
+
+    public static synchronized ILiferayProjectProvider[] getProviders( String projectType )
+    {
+        if( providerReader == null )
+        {
+            providerReader = new LiferayProjectProviderReader();
+        }
+
+        return providerReader.getProviders( projectType );
     }
 
     public static synchronized ILiferayProjectProvider[] getProviders( Class<?> type )

@@ -17,8 +17,11 @@ package com.liferay.ide.project.ui.wizard;
 import com.liferay.ide.core.util.CoreUtil;
 import com.liferay.ide.project.core.model.SDKProjectImportOp;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IPath;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
+import org.eclipse.sapphire.platform.PathBridge;
 import org.eclipse.sapphire.ui.def.DefinitionLoader;
 import org.eclipse.sapphire.ui.forms.swt.SapphireWizard;
 import org.eclipse.sapphire.ui.forms.swt.SapphireWizardPage;
@@ -30,13 +33,10 @@ import org.eclipse.ui.IWorkbenchWizard;
 /**
  * @author Simon Jiang
  */
-
 public class SDKProjectImportWizard extends SapphireWizard<SDKProjectImportOp>
     implements IWorkbenchWizard, INewWizard
 {
-
     private String title;
-
 
     public SDKProjectImportWizard(final String newTitle)
     {
@@ -44,9 +44,27 @@ public class SDKProjectImportWizard extends SapphireWizard<SDKProjectImportOp>
         this.title = newTitle;
     }
 
+    public SDKProjectImportWizard(final IPath projectLocation)
+    {
+        super( createDefaultOp(projectLocation), DefinitionLoader.sdef( SDKProjectImportWizard.class ).wizard() );
+    }
+
     public SDKProjectImportWizard()
     {
         super( createDefaultOp(), DefinitionLoader.sdef( SDKProjectImportWizard.class ).wizard() );
+    }
+
+    private static SDKProjectImportOp createDefaultOp( final IPath projectLocation )
+    {
+        final SDKProjectImportOp op = SDKProjectImportOp.TYPE.instantiate();
+        op.setLocation( PathBridge.create( projectLocation ) );
+
+        return op;
+    }
+
+    private static SDKProjectImportOp createDefaultOp()
+    {
+        return SDKProjectImportOp.TYPE.instantiate();
     }
 
     @Override
@@ -63,9 +81,10 @@ public class SDKProjectImportWizard extends SapphireWizard<SDKProjectImportOp>
 
             if( CoreUtil.isNullOrEmpty( message ) )
             {
-                wizardPage.setMessage( "Please select an exsiting project" );
+                wizardPage.setMessage( "Please select an existing project" );
             }
         }
+
         if ( title != null)
         {
             this.getContainer().getShell().setText( title );
@@ -77,13 +96,21 @@ public class SDKProjectImportWizard extends SapphireWizard<SDKProjectImportOp>
     @Override
     public void init( IWorkbench workbench, IStructuredSelection selection )
     {
-
     }
 
 
-    private static SDKProjectImportOp createDefaultOp()
+    @Override
+    protected void performPostFinish()
     {
-        return SDKProjectImportOp.TYPE.instantiate();
-    }
+        super.performPostFinish();
 
+        final String projectName = element().getFinalProjectName().content();
+
+        final IProject project = CoreUtil.getProject( projectName );
+
+        if( project != null && project.isAccessible() )
+        {
+            NewLiferayPluginProjectWizard.checkAndConfigureIvy( project );
+        }
+    }
 }

@@ -28,7 +28,7 @@
         <label>Import Project</label>
         <page>
             <id>ImportLiferaySDKProjectPage</id>
-            <label>Import Liferay SDK Project</label>
+            <label>Import Liferay Project</label>
             <content>
                 <property-editor>Location</property-editor>
                 <spacer></spacer>

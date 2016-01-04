@@ -38,7 +38,11 @@ public class ProjectUI extends AbstractUIPlugin
 {
 
     // Shared images
-    public static final String IMAGE_ID = "war.image"; //$NON-NLS-1$
+    public static final String WAR_IMAGE_ID = "war.image"; //$NON-NLS-1$
+    public static final String CHECKED_IMAGE_ID = "checked.image"; //$NON-NLS-1$
+    public static final String MIGRATION_TASKS_IMAGE_ID = "migration.tasks.image"; //$NON-NLS-1$
+    public static final String UNCHECKED_IMAGE_ID = "unchecked.image"; //$NON-NLS-1$
+    public static final String EXPANDALL_IMAGE_ID = "expandall.image"; //$NON-NLS-1$
 
     public static final String LAST_SDK_IMPORT_LOCATION_PREF = "last.sdk.import.location"; //$NON-NLS-1$
 
@@ -140,7 +144,27 @@ public class ProjectUI extends AbstractUIPlugin
         IPath path = new Path( "icons/e16/war.gif" ); //$NON-NLS-1$
         URL url = FileLocator.find( bundle, path, null );
         ImageDescriptor desc = ImageDescriptor.createFromURL( url );
-        registry.put( IMAGE_ID, desc );
+        registry.put( WAR_IMAGE_ID, desc );
+
+        IPath checked = new Path( "icons/e16/checked.png" ); //$NON-NLS-1$
+        URL checkedurl = FileLocator.find( bundle, checked, null );
+        ImageDescriptor checkeddesc = ImageDescriptor.createFromURL( checkedurl );
+        registry.put( CHECKED_IMAGE_ID, checkeddesc );
+
+        IPath unchecked = new Path( "icons/e16/unchecked.png" ); //$NON-NLS-1$
+        URL uncheckedurl = FileLocator.find( bundle, unchecked, null );
+        ImageDescriptor uncheckeddesc = ImageDescriptor.createFromURL( uncheckedurl );
+        registry.put( UNCHECKED_IMAGE_ID, uncheckeddesc );
+
+        IPath migrationtasks = new Path( "icons/e16/migration-tasks.png" ); //$NON-NLS-1$
+        URL migrationtasksurl = FileLocator.find( bundle, migrationtasks, null );
+        ImageDescriptor migrationtasksdesc = ImageDescriptor.createFromURL( migrationtasksurl );
+        registry.put( MIGRATION_TASKS_IMAGE_ID, migrationtasksdesc );
+
+        IPath expandall = new Path( "icons/e16/expandall.gif" ); //$NON-NLS-1$
+        URL expandallurl = FileLocator.find( bundle, expandall, null );
+        ImageDescriptor expandalldesc = ImageDescriptor.createFromURL( expandallurl );
+        registry.put( EXPANDALL_IMAGE_ID, expandalldesc );
     }
 
     /*
@@ -150,7 +174,6 @@ public class ProjectUI extends AbstractUIPlugin
     @Override
     public void start( BundleContext context ) throws Exception
     {
-
         super.start( context );
 
         plugin = this;
@@ -163,9 +186,9 @@ public class ProjectUI extends AbstractUIPlugin
     @Override
     public void stop( BundleContext context ) throws Exception
     {
-
         plugin = null;
 
         super.stop( context );
     }
+
 }

@@ -39,7 +39,7 @@ public class ProjectProviderDefaultValueService extends DefaultValueService
         final IScopeContext[] prefContexts = { DefaultScope.INSTANCE, InstanceScope.INSTANCE };
         final String defaultProjectBuildType =
             Platform.getPreferencesService().getString(
-                ProjectCore.PLUGIN_ID, ProjectCore.PREF_DEFAULT_PROJECT_BUILD_TYPE_OPTION, null,
+                ProjectCore.PLUGIN_ID, ProjectCore.PREF_DEFAULT_PLUGIN_PROJECT_BUILD_TYPE_OPTION, null,
                     prefContexts );
 
         if( defaultProjectBuildType != null )

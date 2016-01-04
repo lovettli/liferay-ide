@@ -12,82 +12,46 @@
  * details.
  *
  *******************************************************************************/
+
 package com.liferay.ide.gradle.core;
 
-
+import com.gradleware.tooling.toolingclient.GradleDistribution;
 import com.liferay.ide.core.AbstractLiferayProjectProvider;
 import com.liferay.ide.core.ILiferayProject;
-import com.liferay.ide.core.ILiferayProjectProvider;
-import com.liferay.ide.gradle.toolingapi.custom.CustomModel;
+import com.liferay.ide.core.LiferayNature;
+import com.liferay.ide.project.core.NewLiferayProjectProvider;
+import com.liferay.ide.project.core.ProjectCore;
+import com.liferay.ide.project.core.modules.BladeCLI;
+import com.liferay.ide.project.core.modules.BladeCLIException;
+import com.liferay.ide.project.core.modules.NewLiferayModuleProjectOp;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.ArrayList;
 
+import org.eclipse.buildship.core.configuration.GradleProjectNature;
+import org.eclipse.buildship.core.projectimport.ProjectImportConfiguration;
+import org.eclipse.buildship.core.util.gradle.GradleDistributionWrapper;
+import org.eclipse.buildship.core.util.progress.AsyncHandler;
+import org.eclipse.buildship.core.workspace.SynchronizeGradleProjectJob;
 import org.eclipse.core.resources.IProject;
-import org.springsource.ide.eclipse.gradle.core.GradleCore;
-import org.springsource.ide.eclipse.gradle.core.GradleNature;
-import org.springsource.ide.eclipse.gradle.core.GradleProject;
-import org.springsource.ide.eclipse.gradle.core.modelmanager.IGradleModelListener;
-
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.sapphire.platform.PathBridge;
 
 /**
  * @author Gregory Amerson
+ * @author Terry Jia
+ * @author Andy Wu
+ * @author Simon Jiang
  */
-public class GradleProjectProvider extends AbstractLiferayProjectProvider implements ILiferayProjectProvider, IGradleModelListener
+public class GradleProjectProvider extends AbstractLiferayProjectProvider implements NewLiferayProjectProvider<NewLiferayModuleProjectOp>
 {
-
-    private final Map<GradleProject, Map<String, Boolean>> projectPluginsMap =
-        new WeakHashMap<GradleProject, Map<String, Boolean>>();
 
     public GradleProjectProvider()
     {
         super( new Class<?>[] { IProject.class } );
-    }
-
-    private Boolean checkModel( GradleProject gradleProject, String pluginClass )
-    {
-        final CustomModel model = LRGradleCore.getToolingModel( CustomModel.class, gradleProject );
-
-        return model != null && model.hasPlugin( pluginClass );
-    }
-
-    private boolean hasPlugin( GradleProject gradleProject, String pluginClass )
-    {
-        Boolean retval = null;
-
-        final Map<String, Boolean> projectPlugins = this.projectPluginsMap.get( gradleProject );
-
-        if( projectPlugins != null )
-        {
-            if( projectPlugins.containsKey( pluginClass ) )
-            {
-                retval = projectPlugins.get( pluginClass );
-            }
-            else
-            {
-                retval = checkModel( gradleProject, pluginClass );
-                projectPlugins.put( pluginClass, retval );
-            }
-        }
-        else
-        {
-            retval = checkModel( gradleProject, pluginClass );
-
-            final Map<String, Boolean> plugins = new HashMap<String, Boolean>();
-            plugins.put( pluginClass, retval );
-            this.projectPluginsMap.put( gradleProject, plugins );
-
-            gradleProject.addModelListener( this );
-        }
-
-        return retval == null ? false : retval;
-    }
-
-    @Override
-    public synchronized <T> void modelChanged( GradleProject project, Class<T> type, T model )
-    {
-        this.projectPluginsMap.remove( project );
     }
 
     @Override
@@ -99,17 +63,70 @@ public class GradleProjectProvider extends AbstractLiferayProjectProvider implem
         {
             final IProject project = (IProject) adaptable;
 
-            if( GradleNature.hasNature( project ) )
+            try
             {
-                final GradleProject gradleProject = GradleCore.create( project );
-
-                if( hasPlugin( gradleProject, "aQute.bnd.gradle.BndBuilderPlugin" ) ||
-                    hasPlugin( gradleProject, "org.dm.gradle.plugins.bundle.BundlePlugin" ) )
+                if( LiferayNature.hasNature( project ) && GradleProjectNature.INSTANCE.isPresentOn( project ) )
                 {
-                    return new GradleBundleProject( project );
+                    return new LiferayGradleProject( project );
                 }
             }
+            catch( Exception e )
+            {
+                // ignore errors
+            }
         }
+
+        return retval;
+    }
+
+    @Override
+    public IStatus createNewProject( NewLiferayModuleProjectOp op, IProgressMonitor monitor ) throws CoreException
+    {
+        IStatus retval = null;
+
+        final String projectName = op.getProjectName().content();
+
+        IPath location = PathBridge.create( op.getLocation().content() );
+
+        final String projectTemplateName = op.getProjectTemplateName().content();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append( "create " );
+        sb.append( "-d \"" + location.toFile().getAbsolutePath() +  "\" " );
+        sb.append( "-t " + projectTemplateName + " " );
+        sb.append( "\"" + projectName + "\"");
+
+        try
+        {
+            BladeCLI.execute( sb.toString() );
+        }
+        catch( BladeCLIException e )
+        {
+            retval = ProjectCore.createErrorStatus( e );
+        }
+
+        if( retval.isOK() )
+        {
+            ProjectImportConfiguration configuration = new ProjectImportConfiguration();
+            GradleDistributionWrapper from = GradleDistributionWrapper.from( GradleDistribution.fromBuild() );
+            configuration.setGradleDistribution( from );
+            configuration.setProjectDir( location.toFile() );
+            configuration.setApplyWorkingSets( false );
+            configuration.setWorkingSets( new ArrayList<String>() );
+            new SynchronizeGradleProjectJob(
+                configuration.toFixedAttributes(), configuration.getWorkingSets().getValue(),
+                AsyncHandler.NO_OP ).schedule();
+        }
+
+        return retval;
+    }
+
+    @Override
+    public IStatus validateProjectLocation( String projectName, IPath path )
+    {
+        IStatus retval = Status.OK_STATUS;
+
+        //TODO validation gradle project location
 
         return retval;
     }

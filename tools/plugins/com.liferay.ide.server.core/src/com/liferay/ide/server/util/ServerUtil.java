@@ -94,11 +94,14 @@ public class ServerUtil
 
     public static boolean bsnExists( String bsn, BundleDTO[] bundles )
     {
-        for( BundleDTO bundle : bundles )
+        if( bsn != null )
         {
-            if( bundle.symbolicName.equals( bsn ) )
+            for( BundleDTO bundle : bundles )
             {
-                return true;
+                if( bsn.equals( bundle.symbolicName ) )
+                {
+                    return true;
+                }
             }
         }
 
@@ -487,23 +490,29 @@ public class ServerUtil
 
         IStatus status = sdk.validate();
 
-        if ( !status.isOK())
+        if ( !status.isOK() )
         {
             return null;
         }
 
-        Map<String, Object> appServerProperties = sdk.getBuildProperties();
+        final Map<String, Object> appServerProperties = sdk.getBuildProperties();
 
-        final PortalBundleFactory[] factories = LiferayServerCore.getPortalBundleFactories();
-        for( PortalBundleFactory factory : factories )
+        final String appServerType = (String) ( appServerProperties.get( "app.server.type" ) );
+
+        PortalBundleFactory factory = LiferayServerCore.getPortalBundleFactories( appServerType );
+
+        if ( factory != null )
         {
             final IPath path = factory.canCreateFromPath( appServerProperties );
 
             if( path != null )
             {
-                return factory.create( path );
+                PortalBundle bundle = factory.create( path );
+
+                return bundle;
             }
         }
+
         return null;
     }
 

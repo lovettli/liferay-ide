@@ -34,9 +34,15 @@
          point="org.eclipse.ui.perspectives">
       <perspective
             class="com.liferay.ide.ui.LiferayPerspectiveFactory"
-            icon="icons/e16/liferay.png"
+            icon="icons/liferay_logo_16.png"
             id="com.liferay.ide.eclipse.ui.perspective.liferay"
             name="%liferay.perspective.name">
+      </perspective>
+      <perspective
+            class="com.liferay.ide.ui.LiferayWorkspacePerspectiveFactory"
+            icon="icons/liferay_logo_16.png"
+            id="com.liferay.ide.eclipse.ui.perspective.liferayworkspace"
+            name="Liferay Workspace">
       </perspective>
    </extension>
    <extension
@@ -169,5 +175,32 @@
             file="help/tasks/using-remote-servers-toc.xml"
             primary="false">
       </toc>
+   </extension>
+   <extension
+         point="org.eclipse.ui.commands">
+        <command
+            id="com.liferay.ide.ui.workspace.launchWorkspace"
+            name="Launch Workspace">
+            <commandParameter
+                  id="com.liferay.ide.ui.workspace.launchWorkspace.workspaceLocation"
+                  name="Workspace Location"
+                  optional="false">
+            </commandParameter>
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            commandId="com.liferay.ide.ui.workspace.launchWorkspace"
+            class="com.liferay.ide.ui.workspace.LaunchWorkspaceHandler">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="true"
+            class="com.liferay.ide.ui.workspace.LaunchWorkspaceMenu"
+            locationURI="menu:file?before=org.eclipse.ui.file.restartWorkbench">
+       </menuContribution>
    </extension>
 </plugin>

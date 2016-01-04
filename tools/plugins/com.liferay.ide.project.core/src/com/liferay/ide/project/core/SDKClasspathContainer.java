@@ -28,31 +28,45 @@ import org.eclipse.jdt.core.IJavaProject;
  */
 public class SDKClasspathContainer extends PluginClasspathContainer implements IClasspathContainer
 {
-    public static final String ID = "com.liferay.ide.sdk.container";
-
-    protected static final String[] commonJars =
+    private final static String[] commonJars =
     {
-        "commons-logging.jar",  //$NON-NLS-1$
-        "log4j.jar",  //$NON-NLS-1$
-        "util-bridges.jar", //$NON-NLS-1$
-        "util-java.jar",  //$NON-NLS-1$
-        "util-taglib.jar",  //$NON-NLS-1$
+        "commons-logging.jar",
+        "log4j.jar",
+        "util-bridges.jar",
+        "util-java.jar",
+        "util-taglib.jar",
     };
 
-    protected IPath portalGlobalDir;
+    public final static String ID = "com.liferay.ide.sdk.container";
 
-    protected IPath bundleDir;
+    private final IPath bundleDir;
 
-    protected IPath[] bundleLibDependencyPath;
+    private final IPath[] bundleLibDependencyPaths;
+
+    private final IPath portalGlobalDir;
+
+    private final IPath[] sdkDependencyPaths;
 
     public SDKClasspathContainer(
         IPath containerPath, IJavaProject project, IPath portalDir, String javadocURL, IPath sourceURL,
-        IPath portalGlobalDir, IPath bundleDir, IPath[] bundleLibDependencyPath )
+        IPath portalGlobalDir, IPath bundleDir, IPath[] bundleLibDependencyPaths, IPath[] sdkDependencyPaths )
     {
-        super(containerPath,project,portalDir,javadocURL,sourceURL);
+        super( containerPath, project, portalDir, javadocURL, sourceURL );
+
         this.portalGlobalDir = portalGlobalDir;
         this.bundleDir = bundleDir;
-        this.bundleLibDependencyPath = bundleLibDependencyPath;
+        this.bundleLibDependencyPaths = bundleLibDependencyPaths;
+        this.sdkDependencyPaths = sdkDependencyPaths;
+    }
+
+    public IPath getBundleDir()
+    {
+        return bundleDir;
+    }
+
+    public IPath[] getBundleLibDependencyPath()
+    {
+        return this.bundleLibDependencyPaths;
     }
 
     @Override
@@ -62,7 +76,7 @@ public class SDKClasspathContainer extends PluginClasspathContainer implements I
         {
             List<IClasspathEntry> entries = new ArrayList<IClasspathEntry>();
 
-            for( IPath pluginJarPath : bundleLibDependencyPath )
+            for( IPath pluginJarPath : bundleLibDependencyPaths )
             {
                 IPath sourcePath = null;
 
@@ -70,6 +84,7 @@ public class SDKClasspathContainer extends PluginClasspathContainer implements I
                 {
                     sourcePath = getSourceLocation();
                 }
+
                 entries.add( createClasspathEntry( pluginJarPath, sourcePath, this.javadocURL ) );
             }
 
@@ -83,6 +98,14 @@ public class SDKClasspathContainer extends PluginClasspathContainer implements I
                 for( String pluginPackageJar : getPortalDependencyJars() )
                 {
                     entries.add( createPortalJarClasspathEntry( pluginPackageJar ) );
+                }
+            }
+
+            if ( sdkDependencyPaths != null )
+            {
+                for( IPath sdkDependencyJarPath : sdkDependencyPaths )
+                {
+                    entries.add( createClasspathEntry( sdkDependencyJarPath, null, null ) );
                 }
             }
 
@@ -103,25 +126,10 @@ public class SDKClasspathContainer extends PluginClasspathContainer implements I
         return portalGlobalDir;
     }
 
-    public IPath getBundleDir()
-    {
-        return bundleDir;
-    }
-
-    public IPath[] getBundleLibDependencyPath()
-    {
-        return this.bundleLibDependencyPath;
-    }
-
     @Override
     protected String[] getPortalJars()
     {
         return commonJars;
     }
 
-    public static boolean isPluginContainerEntry( IClasspathEntry e )
-    {
-        return e != null && e.getEntryKind() == IClasspathEntry.CPE_CONTAINER &&
-            e.getPath().segment( 0 ).equals( ID );
-    }
 }

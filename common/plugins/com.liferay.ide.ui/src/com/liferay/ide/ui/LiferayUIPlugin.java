@@ -15,6 +15,11 @@
 
 package com.liferay.ide.ui;
 
+import com.liferay.ide.core.util.CoreUtil;
+import com.liferay.ide.sdk.core.SDK;
+import com.liferay.ide.sdk.core.SDKUtil;
+import com.liferay.ide.ui.util.UIUtil;
+
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +31,11 @@ import javax.management.ObjectName;
 
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.resources.WorkspaceJob;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
@@ -43,6 +52,10 @@ import org.eclipse.jdt.ui.JavaUI;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.TaskBar;
+import org.eclipse.swt.widgets.TaskItem;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PlatformUI;
@@ -108,7 +121,7 @@ public class LiferayUIPlugin extends AbstractUIPlugin implements IStartup
         return plugin;
     }
 
-    @SuppressWarnings( "rawtypes" )
+    @SuppressWarnings( { "rawtypes", "unchecked" } )
     public static Map getLiferaySettings()
     {
         final Map options = new DefaultCodeFormatterOptions( LiferayDefaultCodeFormatterSettings.settings ).getMap();
@@ -137,6 +150,37 @@ public class LiferayUIPlugin extends AbstractUIPlugin implements IStartup
     {
     }
 
+    private void applyWorkspaceBadge()
+    {
+        final String workspaceName = CoreUtil.getWorkspaceRoot().getLocation().lastSegment();
+
+        UIUtil.async( new Runnable()
+        {
+            public void run()
+            {
+                try
+                {
+                    final Display display = Display.getDefault();
+                    final Shell shell = display.getActiveShell();
+                    final TaskBar taskBar = display.getSystemTaskBar();
+
+                    TaskItem taskItem = taskBar.getItem(shell);
+
+                    if( taskItem == null)
+                    {
+                        taskItem = taskBar.getItem(null);
+                    }
+
+                    taskItem.setOverlayText( workspaceName );
+                }
+                catch( Exception e )
+                {
+                    //ignore
+                }
+            }
+         });
+    }
+
     public void earlyStartup()
     {
         if( isFirstStartup() )
@@ -147,9 +191,46 @@ public class LiferayUIPlugin extends AbstractUIPlugin implements IStartup
         }
 
         registerMBeans();
+
+        lookupLiferay7SDKDir();
+
+        applyWorkspaceBadge();
     }
 
+    private void lookupLiferay7SDKDir()
+    {
+        String liferay7SDKdir = System.getProperty( "liferay7.sdk.dir" );
 
+        if( liferay7SDKdir != null && liferay7SDKdir.startsWith( "\"" ) )
+        {
+            liferay7SDKdir = liferay7SDKdir.substring( 1 );
+        }
+
+        if( liferay7SDKdir != null && liferay7SDKdir.endsWith( "\"" ) )
+        {
+            liferay7SDKdir = liferay7SDKdir.substring( 0, liferay7SDKdir.length() - 1 );
+        }
+
+
+        if( liferay7SDKdir != null )
+        {
+            final SDK sdk = SDKUtil.createSDKFromLocation( new Path( liferay7SDKdir ) );
+
+            if( sdk != null )
+            {
+                new WorkspaceJob("Opening Liferay 7 Plugins SDK Project")
+                {
+                    @Override
+                    public IStatus runInWorkspace( IProgressMonitor monitor ) throws CoreException
+                    {
+                        SDKUtil.openAsProject( sdk );
+
+                        return Status.OK_STATUS;
+                    }
+                }.schedule();
+            }
+        }
+    }
 
     public Image getImage( String key )
     {
@@ -294,12 +375,4 @@ public class LiferayUIPlugin extends AbstractUIPlugin implements IStartup
         }
     }
 
-    // public synchronized IDocumentProvider
-    // getPluginPropertiesFileDocumentProvider() {
-    // if (fPluginPropertiesFileDocumentProvider == null) {
-    // fPluginPropertiesFileDocumentProvider = new
-    // PluginPropertiesFileDocumentProvider();
-    // }
-    // return fPluginPropertiesFileDocumentProvider;
-    // }
 }

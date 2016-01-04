@@ -25,15 +25,33 @@
             name="Liferay Bundle Project Configurator"
             secondaryTo="maven-bundle-plugin">
       </configurator>
+      <configurator
+            class="com.liferay.ide.maven.core.BundleProjectConfigurator"
+            id="com.liferay.ide.maven.core.bnd.configurator"
+            name="Liferay BND Project Configurator"
+            secondaryTo="bnd-maven-plugin">
+      </configurator>
    </extension>
    <extension
          point="com.liferay.ide.core.liferayProjectProviders">
       <liferayProjectProvider
-            class="com.liferay.ide.maven.core.LiferayMavenProjectProvider"
+            class="com.liferay.ide.maven.core.NewMavenPluginProjectProvider"
             displayName="Maven (liferay-maven-plugin)"
             id="com.liferay.ide.maven.core.mavenProjectProvider"
             priority="high"
-            shortName="maven">
+            shortName="maven"
+            projectType="plugin">
+      </liferayProjectProvider>
+   </extension>
+   <extension
+         point="com.liferay.ide.core.liferayProjectProviders">
+      <liferayProjectProvider
+            class="com.liferay.ide.maven.core.NewMavenModuleProjectProvider"
+            displayName="Maven (liferay-maven-module)"
+            id="com.liferay.ide.maven.core.mavenModuleProjectProvider"
+            priority="high"
+            shortName="maven-module"
+            projectType="module">
       </liferayProjectProvider>
    </extension>
    <extension

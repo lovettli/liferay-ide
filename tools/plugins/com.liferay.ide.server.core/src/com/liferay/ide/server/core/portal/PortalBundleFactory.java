@@ -24,7 +24,7 @@ import org.eclipse.core.runtime.IPath;
  */
 public interface PortalBundleFactory
 {
-    String EXTENSION_ID = "com.liferay.ide.server.core.portalBundleFactories";
+    String EXTENSION_ID = "com.liferay.ide.server.core.portalBundles";
 
     IPath canCreateFromPath( IPath location );
 
@@ -33,4 +33,7 @@ public interface PortalBundleFactory
     PortalBundle create( IPath location );
 
     PortalBundle create( Map<String, String> appServerProperties );
+
+    String getType();
+
 }

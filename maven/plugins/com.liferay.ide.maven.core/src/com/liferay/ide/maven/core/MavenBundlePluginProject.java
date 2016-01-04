@@ -20,6 +20,8 @@ import com.liferay.ide.project.core.IProjectBuilder;
 import com.liferay.ide.server.remote.IRemoteServerPublisher;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.MavenProject;
@@ -29,7 +31,6 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
 
@@ -89,7 +90,7 @@ public class MavenBundlePluginProject extends LiferayMavenProject implements IBu
     }
 
     @Override
-    public IPath getOutputJar( boolean buildIfNeeded, IProgressMonitor monitor ) throws CoreException
+    public IPath getOutputBundle( boolean buildIfNeeded, IProgressMonitor monitor ) throws CoreException
     {
         IPath outputJar = null;
 
@@ -98,32 +99,34 @@ public class MavenBundlePluginProject extends LiferayMavenProject implements IBu
             final MavenProjectBuilder mavenProjectBuilder = new MavenProjectBuilder( this.getProject() );
 
             // TODO update status
-            final IStatus status = mavenProjectBuilder.execGoal( "package", monitor );
+            final List<String> goals = Arrays.asList( "package" );
 
-            if( status != null && status.isOK() )
+            try
             {
-                final IMavenProjectFacade projectFacade = MavenUtil.getProjectFacade( getProject(), monitor );
-                final MavenProject mavenProject = projectFacade.getMavenProject( monitor );
-
-                final String targetName = mavenProject.getBuild().getFinalName() + ".jar";
-
-                // TODO find a better way to get the target folder
-                final IFolder targetFolder = getProject().getFolder( "target" );
-
-                if( targetFolder.exists() )
-                {
-                    //targetFolder.refreshLocal( IResource.DEPTH_ONE, monitor );
-                    final IPath targetFile = targetFolder.getRawLocation().append( targetName );
-
-                    if( targetFile.toFile().exists() )
-                    {
-                        outputJar = targetFile;
-                    }
-                }
+                mavenProjectBuilder.execGoals( goals, monitor );
             }
-            else
+            catch( CoreException e )
             {
-                throw new CoreException( status );
+                LiferayMavenCore.logError( "Error building package", e );
+            }
+        }
+
+        final IMavenProjectFacade projectFacade = MavenUtil.getProjectFacade( getProject(), monitor );
+        final MavenProject mavenProject = projectFacade.getMavenProject( monitor );
+
+        final String targetName = mavenProject.getBuild().getFinalName() + ".jar";
+
+        // TODO find a better way to get the target folder
+        final IFolder targetFolder = getProject().getFolder( "target" );
+
+        if( targetFolder.exists() )
+        {
+            // targetFolder.refreshLocal( IResource.DEPTH_ONE, monitor );
+            final IPath targetFile = targetFolder.getRawLocation().append( targetName );
+
+            if( targetFile.toFile().exists() )
+            {
+                outputJar = targetFile;
             }
         }
 
@@ -145,6 +148,11 @@ public class MavenBundlePluginProject extends LiferayMavenProject implements IBu
         if( file != null && file.exists() && !artifact.getFile().getName().equals( "classes" ) )
         {
             retval = new DefaultMaven2OsgiConverter().getBundleSymbolicName( artifact );
+        }
+        else
+        {
+            // fallback to project name
+            retval = getProject().getLocation().lastSegment();
         }
 
         return retval;

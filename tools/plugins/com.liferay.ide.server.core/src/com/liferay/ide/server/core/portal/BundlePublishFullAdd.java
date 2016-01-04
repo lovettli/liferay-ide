@@ -20,8 +20,10 @@ import com.liferay.ide.core.LiferayCore;
 import com.liferay.ide.core.util.FileUtil;
 import com.liferay.ide.server.core.LiferayServerCore;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IAdaptable;
@@ -31,6 +33,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.wst.server.core.IModule;
 import org.eclipse.wst.server.core.IServer;
+import org.osgi.framework.dto.BundleDTO;
 
 /**
  * @author Gregory Amerson
@@ -38,9 +41,9 @@ import org.eclipse.wst.server.core.IServer;
 public class BundlePublishFullAdd extends BundlePublishOperation
 {
 
-    public BundlePublishFullAdd( IServer s, IModule[] modules )
+    public BundlePublishFullAdd( IServer s, IModule[] modules, BundleSupervisor supervisor, BundleDTO[] existingBundles )
     {
-        super( s, modules );
+        super( s, modules, supervisor, existingBundles );
     }
 
     private IStatus autoDeploy( IPath output ) throws CoreException
@@ -89,14 +92,19 @@ public class BundlePublishFullAdd extends BundlePublishOperation
 
             if( bundleProject != null )
             {
-                // TODO catch error in getOUtputJar and show a popup notification instead
-                final IPath outputJar = bundleProject.getOutputJar( true, monitor );
+                // TODO catch error in getOutputJar and show a popup notification instead
+
+                monitor.subTask( "Building " + module.getName() + " output bundle..." );
+
+                final IPath outputJar = bundleProject.getOutputBundle( true, monitor );
 
                 if( outputJar!= null && outputJar.toFile().exists() )
                 {
                     if( this.server.getServerState() == IServer.STATE_STARTED )
                     {
-                        retval = remoteDeploy( bundleProject.getSymbolicName(), outputJar );
+                        monitor.subTask( "Remotely deploying " + module.getName() + " to Liferay module framework..." );
+
+                        retval = remoteDeploy( bundleProject.getSymbolicName(), outputJar, _existingBundles );
                     }
                     else
                     {
@@ -127,19 +135,34 @@ public class BundlePublishFullAdd extends BundlePublishOperation
         }
     }
 
-    private IStatus remoteDeploy( String bsn , IPath output )
+    private String getBundleUrl( File bundleFile, String bsn ) throws MalformedURLException
+    {
+        String bundleUrl = null;
+
+        if( bundleFile.toPath().toString().toLowerCase().endsWith( ".war" ) )
+        {
+            bundleUrl = "webbundle:" + bundleFile.toURI().toURL().toExternalForm() + "?Web-ContextPath=/" + bsn;
+        }
+        else
+        {
+            bundleUrl = bundleFile.toURI().toURL().toExternalForm();
+        }
+
+        return bundleUrl;
+    }
+
+    private IStatus remoteDeploy( String bsn , IPath output, BundleDTO[] existingBundles )
     {
         IStatus retval = null;
-
-        final BundleDeployer deployer = getBundleDeployer();
 
         if( output != null && output.toFile().exists() )
         {
             try
             {
-                long bundleId = deployer.deployBundle( bsn, output.toFile() );
+                BundleDTO deployed = _supervisor.deploy(
+                    bsn, output.toFile(), getBundleUrl( output.toFile(), bsn ), existingBundles );
 
-                retval = new Status( IStatus.OK, LiferayServerCore.PLUGIN_ID, (int) bundleId, null, null );
+                retval = new Status( IStatus.OK, LiferayServerCore.PLUGIN_ID, (int) deployed.id, null, null );
             }
             catch( Exception e )
             {

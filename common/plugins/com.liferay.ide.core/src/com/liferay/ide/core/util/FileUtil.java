@@ -20,6 +20,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -55,11 +56,10 @@ import org.xml.sax.ErrorHandler;
 /**
  * @author Greg Amerson
  * @author Cindy Li
+ * @author Simon Jiang
  */
 public class FileUtil
 {
-
-
 
     public static void clearContents( File versionFile )
     {
@@ -104,9 +104,9 @@ public class FileUtil
         }
     }
 
-    public static void copyFileToDir( File file, File dir )
+    public static void copyFile( File src, File dest )
     {
-        if( file == null || ( !file.exists() ) || dir == null || ( !dir.exists() ) || ( !dir.isDirectory() ) )
+        if( src == null || ( !src.exists() ) || dest == null || dest.isDirectory() )
         {
             return;
         }
@@ -118,8 +118,8 @@ public class FileUtil
 
         try
         {
-            out = new FileOutputStream( new File( dir, file.getName() ) );
-            in = new FileInputStream( file );
+            out = new FileOutputStream( dest );
+            in = new FileInputStream( src );
 
             int avail = in.read( buf );
             while( avail > 0 )
@@ -130,7 +130,7 @@ public class FileUtil
         }
         catch( Exception e )
         {
-            LiferayCore.logError( "Unable to copy file " + file.getName() + " to " + dir.getAbsolutePath() ); //$NON-NLS-1$ //$NON-NLS-2$
+            LiferayCore.logError( "Unable to copy file " + src.getName() + " to " + dest.getAbsolutePath() ); //$NON-NLS-1$ //$NON-NLS-2$
         }
         finally
         {
@@ -153,6 +153,11 @@ public class FileUtil
                 // ignore
             }
         }
+    }
+
+    public static void copyFileToDir( File src, File dir )
+    {
+        copyFile( src, new File( dir, src.getName() ) );
     }
 
     public static void deleteDir( File directory, boolean removeAll )
@@ -196,6 +201,21 @@ public class FileUtil
             }
         }
 
+    }
+
+    public static File[] getDirectories( File directory )
+    {
+        return directory.listFiles
+        (
+            new FileFilter()
+            {
+                @Override
+                public boolean accept( File file )
+                {
+                    return file.isDirectory();
+                }
+            }
+        );
     }
 
     public static IContainer getWorkspaceContainer( final File f )

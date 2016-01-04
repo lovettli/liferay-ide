@@ -17,22 +17,25 @@ package com.liferay.ide.sdk.core;
 
 import com.liferay.ide.core.ILiferayConstants;
 import com.liferay.ide.core.util.CoreUtil;
+import com.liferay.ide.core.util.FileListing;
 import com.liferay.ide.core.util.FileUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import org.apache.tools.ant.Project;
+import org.apache.tools.ant.taskdefs.Dirname;
 import org.apache.tools.ant.taskdefs.Property;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
@@ -47,6 +50,7 @@ import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.debug.internal.core.XMLMemento;
 import org.eclipse.osgi.util.NLS;
+import org.osgi.framework.Version;
 
 /**
  * @author Greg Amerson
@@ -56,21 +60,25 @@ import org.eclipse.osgi.util.NLS;
 @SuppressWarnings( "restriction" )
 public class SDK
 {
-    public static String createXMLNameValuePair( String name, String value )
-    {
-        return name + "=\"" + value + "\" "; //$NON-NLS-1$ //$NON-NLS-2$
-    }
+    public final static List<String> APP_SERVER_PROPERTIES_KEYS =
+        Collections.unmodifiableList( Arrays.asList( new String[] {
+            "app.server.type",
+            "app.server.dir",
+            "app.server.deploy.dir",
+            "app.server.lib.global.dir",
+            "app.server.parent.dir",
+            "app.server.portal.dir"
+     }));
 
-    public static List<String> SUPPORT_SERVER_TYPES = Arrays.asList( new String[]{ "tomcat", "jboss", "glassfish", "jetty"} );
+    public final static Map<String, Map<String, Object>> buildPropertiesCache = new HashMap<>();
 
-    public static List<String> KEY_BUILD_PROPERTIES = Arrays.asList( new String[] { "app.server.dir",
-        "app.server.deploy.dir", "app.server.lib.global.dir", "app.server.parent.dir", "app.server.portal.dir" } );
-
-    @SuppressWarnings( "deprecation" )
-    protected static IEclipsePreferences getPrefStore()
-    {
-        return new InstanceScope().getNode( SDKCorePlugin.PREFERENCE_ID );
-    }
+    public final static List<String> SUPPORTED_SERVER_TYPES =
+        Collections.unmodifiableList( Arrays.asList( new String[] {
+            "tomcat",
+            "jboss",
+            "glassfish",
+            "jetty"
+    }));
 
     protected boolean contributed;
 
@@ -192,7 +200,7 @@ public class SDK
     }
 
     public IStatus cleanAppServer(
-        IProject project, IPath bundleZipLocation, String appServerDir,
+        IProject project, String bundleZipLocation, String appServerDir,
         IProgressMonitor monitor )
     {
         try
@@ -201,7 +209,7 @@ public class SDK
 
             IPath workPath = new Path( appServerDir ).removeLastSegments( 2 );
 
-            properties.put( ISDKConstants.PROPERTY_APP_ZIP_NAME, bundleZipLocation.toOSString() );
+            properties.put( ISDKConstants.PROPERTY_APP_ZIP_NAME, bundleZipLocation );
             properties.put( ISDKConstants.PROPERTY_EXT_WORK_DIR, workPath.toOSString() );
 
             IStatus status = runTarget( project, properties, "clean-app-server", true, monitor ); //$NON-NLS-1$
@@ -256,71 +264,6 @@ public class SDK
         copy.setVersion( getVersion() );
 
         return copy;
-    }
-
-    public IPath createNewProject(
-        String projectName, ArrayList<String> arguments, String type, String workingDir, IProgressMonitor monitor ) throws CoreException
-    {
-        CreateHelper createHelper = new CreateHelper( this, monitor );
-
-        final IPath pluginFolder = getLocation().append( getPluginFolder( type ) );
-
-        final IPath newPath = pluginFolder.append( projectName + getPluginSuffix( type ) );
-
-        String createScript = ISDKConstants.CREATE_BAT;
-
-        if( !CoreUtil.isWindows() )
-        {
-            createScript = ISDKConstants.CREATE_SH;
-        }
-
-        final IPath createFilePath = pluginFolder.append( createScript );
-
-        final File createFile = createFilePath.toFile();
-
-        String originalCreateConetent = "";
-
-        if( !CoreUtil.isWindows() && createFile.exists() )
-        {
-            originalCreateConetent = FileUtil.readContents( createFile, true );
-
-            if( originalCreateConetent.contains( "DisplayName=\\\"$2\\\"" ) )
-            {
-                String createContent = originalCreateConetent.replace( "DisplayName=\\\"$2\\\"", "DisplayName=\"$2\"" );
-
-                try
-                {
-                    FileUtil.writeFile(
-                        createFile, new ByteArrayInputStream( createContent.toString().getBytes( "UTF-8" ) ), null );
-                }
-                catch( Exception e )
-                {
-                    SDKCorePlugin.logError( e );
-                }
-            }
-        }
-
-        createHelper.runTarget( createFilePath, arguments, workingDir );
-
-        if( !newPath.toFile().exists() )
-        {
-            throw new CoreException( SDKCorePlugin.createErrorStatus( "Create script did not complete successfully." ) );
-        }
-
-        if( !CoreUtil.isNullOrEmpty( originalCreateConetent ) )
-        {
-            try
-            {
-                FileUtil.writeFile(
-                    createFile, new ByteArrayInputStream( originalCreateConetent.toString().getBytes( "UTF-8" ) ), null );
-            }
-            catch( Exception e )
-            {
-                SDKCorePlugin.logError( e );
-            }
-        }
-
-        return newPath;
     }
 
     public IPath createNewExtProject( String extName, String extDisplayName,
@@ -478,6 +421,71 @@ public class SDK
         return null;
     }
 
+    public IPath createNewProject(
+        String projectName, ArrayList<String> arguments, String type, String workingDir, IProgressMonitor monitor ) throws CoreException
+    {
+        CreateHelper createHelper = new CreateHelper( this, monitor );
+
+        final IPath pluginFolder = getLocation().append( getPluginFolder( type ) );
+
+        final IPath newPath = pluginFolder.append( projectName + getPluginSuffix( type ) );
+
+        String createScript = ISDKConstants.CREATE_BAT;
+
+        if( !CoreUtil.isWindows() )
+        {
+            createScript = ISDKConstants.CREATE_SH;
+        }
+
+        final IPath createFilePath = pluginFolder.append( createScript );
+
+        final File createFile = createFilePath.toFile();
+
+        String originalCreateConetent = "";
+
+        if( !CoreUtil.isWindows() && createFile.exists() )
+        {
+            originalCreateConetent = FileUtil.readContents( createFile, true );
+
+            if( originalCreateConetent.contains( "DisplayName=\\\"$2\\\"" ) )
+            {
+                String createContent = originalCreateConetent.replace( "DisplayName=\\\"$2\\\"", "DisplayName=\"$2\"" );
+
+                try
+                {
+                    FileUtil.writeFile(
+                        createFile, new ByteArrayInputStream( createContent.toString().getBytes( "UTF-8" ) ), null );
+                }
+                catch( Exception e )
+                {
+                    SDKCorePlugin.logError( e );
+                }
+            }
+        }
+
+        createHelper.runTarget( createFilePath, arguments, workingDir );
+
+        if( !newPath.toFile().exists() )
+        {
+            throw new CoreException( SDKCorePlugin.createErrorStatus( "Create script did not complete successfully." ) );
+        }
+
+        if( !CoreUtil.isNullOrEmpty( originalCreateConetent ) )
+        {
+            try
+            {
+                FileUtil.writeFile(
+                    createFile, new ByteArrayInputStream( originalCreateConetent.toString().getBytes( "UTF-8" ) ), null );
+            }
+            catch( Exception e )
+            {
+                SDKCorePlugin.logError( e );
+            }
+        }
+
+        return newPath;
+    }
+
     public IPath createNewThemeProject(
         String themeName, String themeDisplayName, boolean separateJRE, String workingDir, String baseDir,
         IProgressMonitor monitor )
@@ -561,6 +569,11 @@ public class SDK
 //            getLocation() != null && getLocation().equals( ( (SDK) obj ).getLocation() );
 //    }
 
+    public String createXMLNameValuePair( String name, String value )
+    {
+        return name + "=\"" + value + "\" ";
+    }
+
     public IStatus directDeploy(
         IProject project, Map<String, String> overrideProperties, boolean separateJRE,
         IProgressMonitor monitor )
@@ -607,9 +620,127 @@ public class SDK
         return antLibs.toArray( new IPath[0] );
     }
 
+    public Map<String, Object> getBuildProperties() throws CoreException
+    {
+        return getBuildProperties( false );
+    }
+
+    public Map<String, Object> getBuildProperties( final boolean reload ) throws CoreException
+    {
+        final Project project = new Project();
+
+        Map<String, Object> sdkProperties = buildPropertiesCache.get( getLocation().toPortableString() );
+
+        try
+        {
+            if ( sdkProperties == null || reload == true )
+            {
+                project.setBaseDir( new File( getLocation().toPortableString() ) );
+                project.setSystemProperties();
+
+                final Dirname dirname = new Dirname();
+                dirname.setProject( project );
+                dirname.setFile( new File( getLocation().append( "build-common.xml" ).toPortableString() ) );
+                dirname.setProperty( "sdk.dir" );
+                dirname.execute();
+
+                final Property envTask = new Property();
+                envTask.setProject( project );
+                envTask.setEnvironment( "env" );
+                envTask.execute();
+
+                loadPropertiesFile( project, "build." + project.getProperty( "user.name" ) + ".properties" );
+                loadPropertiesFile( project, "build." + project.getProperty( "env.COMPUTERNAME" ) + ".properties" );
+                loadPropertiesFile( project, "build." + project.getProperty( "env.HOST" ) + ".properties" );
+                loadPropertiesFile( project, "build." + project.getProperty( "env.HOSTNAME" ) + ".properties" );
+                loadPropertiesFile( project, "build.properties" );
+
+                if ( project.getProperty( "app.server.type" ) == null )
+                {
+                    throw new CoreException( SDKCorePlugin.createErrorStatus(
+                        "Missing ${app.server.type} setting in build.properties file." ) );
+                }
+
+                final Map<String, String> propertyCopyList = new HashMap<String, String>();
+                propertyCopyList.put(
+                    "app.server." + project.getProperty( "app.server.type" ) + ".dir", "app.server.dir" );
+                propertyCopyList.put(
+                    "app.server." + project.getProperty( "app.server.type" ) + ".deploy.dir",
+                    "app.server.deploy.dir" );
+                propertyCopyList.put(
+                    "app.server." + project.getProperty( "app.server.type" ) + ".lib.global.dir",
+                    "app.server.lib.global.dir" );
+                propertyCopyList.put(
+                    "app.server." + project.getProperty( "app.server.type" ) + ".portal.dir",
+                    "app.server.portal.dir" );
+
+                for( String key : propertyCopyList.keySet() )
+                {
+                    AntPropertyCopy propertyCopyTask = new AntPropertyCopy();
+                    propertyCopyTask.setOverride( true );
+                    propertyCopyTask.setProject( project );
+                    String from = key;
+                    String to = propertyCopyList.get( from );
+                    propertyCopyTask.setFrom( from );
+                    propertyCopyTask.setName( to );
+                    propertyCopyTask.execute();
+                }
+
+                sdkProperties = project.getProperties();
+
+                for( String propertyKey : APP_SERVER_PROPERTIES_KEYS )
+                {
+                    if( !sdkProperties.keySet().contains( propertyKey ) )
+                    {
+                        throw new CoreException( SDKCorePlugin.createErrorStatus( "Missing ${" + propertyKey +
+                            "} setting in build.properties file." ) );
+                    }
+                }
+
+                buildPropertiesCache.put( getLocation().toPortableString(), sdkProperties );
+            }
+        }
+        catch( Exception e )
+        {
+            throw new CoreException( SDKCorePlugin.createErrorStatus(e.getMessage()));
+        }
+
+        return sdkProperties;
+    }
+
     private String getDefaultWorkingDir( final IPath buildFile )
     {
         return buildFile.removeLastSegments( 1 ).toOSString();
+    }
+
+    public IPath[] getDependencyJarPaths()
+    {
+        final List<IPath> retval = new ArrayList<IPath>();
+
+        try
+        {
+            final IPath sdkLibPath =  getLocation().append( "dependencies" );
+
+            final int compareVersions = CoreUtil.compareVersions( new Version( getVersion() ), ILiferayConstants.V700 );
+
+            if ( sdkLibPath.toFile().exists() && compareVersions >= 0 )
+            {
+                final List<File> libFiles = FileListing.getFileListing( new File( sdkLibPath.toOSString() ) );
+
+                for( File lib : libFiles )
+                {
+                    if( lib.exists() && lib.getName().endsWith( ".jar" ) )
+                    {
+                        retval.add( new Path( lib.getPath() ) );
+                    }
+                }
+            }
+        }
+        catch( FileNotFoundException e )
+        {
+        }
+
+        return retval.toArray( new IPath[0] );
     }
 
     public IPath getLocation()
@@ -620,53 +751,6 @@ public class SDK
     public String getName()
     {
         return name;
-    }
-
-    public IPath getPortletTemplatePath()
-    {
-        return getLocation().append( ISDKConstants.PORTLET_PLUGIN_ZIP_PATH );
-    }
-
-    public String getVersion()
-    {
-        if( version == null )
-        {
-            IPath sdkLocation = getLocation().makeAbsolute();
-
-            if( !sdkLocation.isEmpty() )
-            {
-                try
-                {
-                    version = SDKUtil.readSDKVersion( sdkLocation.toOSString() );
-
-                    if( version.equals( ILiferayConstants.V611.toString() ) )
-                    {
-                        Properties buildProperties = getProperties( sdkLocation.append( "build.properties" ).toFile() ); //$NON-NLS-1$
-
-                        if( hasAppServerSpecificProps( buildProperties ) )
-                        {
-                            version = ILiferayConstants.V612.toString();
-                        }
-                    }
-
-                    if( version.equals( ILiferayConstants.V6120.toString() ) )
-                    {
-                        Properties buildProperties = getProperties( sdkLocation.append( "build.properties" ).toFile() ); //$NON-NLS-1$
-
-                        if( hasAppServerSpecificProps( buildProperties ) )
-                        {
-                            version = ILiferayConstants.V6130.toString();
-                        }
-                    }
-                }
-                catch( Exception e )
-                {
-                    SDKCorePlugin.logError( "Could not detect the sdk version.", e); //$NON-NLS-1$
-                }
-            }
-        }
-
-        return version;
     }
 
     private String getPluginFolder( String type )
@@ -733,21 +817,14 @@ public class SDK
         }
     }
 
-    private boolean hasAppServerSpecificProps( Properties props )
+    public IPath getPortletTemplatePath()
     {
-        Enumeration<?> names = props.propertyNames();
+        return getLocation().append( ISDKConstants.PORTLET_PLUGIN_ZIP_PATH );
+    }
 
-        while( names.hasMoreElements() )
-        {
-            String name = names.nextElement().toString();
-
-            if( name.matches( "app.server.tomcat.*" ) ) //$NON-NLS-1$
-            {
-                return true;
-            }
-        }
-
-        return false;
+    protected IEclipsePreferences getPrefStore()
+    {
+        return InstanceScope.INSTANCE.getNode( SDKCorePlugin.PREFERENCE_ID );
     }
 
     private Properties getProperties( File file )
@@ -768,74 +845,63 @@ public class SDK
         return properties;
     }
 
-    public Map<String,Object> getBuildProperties() throws CoreException
+    public String getVersion()
     {
-        final Project project = new Project();
-
-        try
+        if( version == null )
         {
-            project.setBaseDir( new File( getLocation().toPortableString() ) );
-            project.setSystemProperties();
+            IPath sdkLocation = getLocation().makeAbsolute();
 
-            Property envTask = new Property();
-            envTask.setProject( project );
-            envTask.setEnvironment( "env" );
-            envTask.execute();
-
-            loadProperties( project, project.getProperty( "user.name" ) );
-            loadProperties( project, project.getProperty( "env.COMPUTERNAME" ) );
-            loadProperties( project, project.getProperty( "env.HOST" ) );
-            loadProperties( project, project.getProperty( "env.HOSTNAME" ) );
-
-            Property propertyTask = new Property();
-            propertyTask.setProject( project );
-            propertyTask.setFile( new File( getLocation().append( "build.properties" ).toPortableString() ) );
-            propertyTask.execute();
-
-            if ( project.getProperty( "app.server.type" ) == null )
+            if( !sdkLocation.isEmpty() )
             {
-                throw new CoreException( SDKCorePlugin.createErrorStatus( "Missing ${app.server.type} setting in build.properties file." ) );
-            }
-
-            final Map<String, String> propertyCopyList = new HashMap<String, String>();
-            propertyCopyList.put(
-                "app.server." + project.getProperty( "app.server.type" ) + ".dir", "app.server.dir" );
-            propertyCopyList.put(
-                "app.server." + project.getProperty( "app.server.type" ) + ".deploy.dir",
-                "app.server.deploy.dir" );
-            propertyCopyList.put(
-                "app.server." + project.getProperty( "app.server.type" ) + ".lib.global.dir",
-                "app.server.lib.global.dir" );
-            propertyCopyList.put(
-                "app.server." + project.getProperty( "app.server.type" ) + ".portal.dir",
-                "app.server.portal.dir" );
-
-            for( Iterator<String> iterator = propertyCopyList.keySet().iterator(); iterator.hasNext(); )
-            {
-                AntPropertyCopy propertyCopyTask = new AntPropertyCopy();
-                propertyCopyTask.setOverride( true );
-                propertyCopyTask.setProject( project );
-                String from = iterator.next();
-                String to = propertyCopyList.get( from );
-                propertyCopyTask.setFrom( from );
-                propertyCopyTask.setName( to );
-                propertyCopyTask.execute();
-            }
-
-            for( String propertyKey : KEY_BUILD_PROPERTIES )
-            {
-                if ( !project.getProperties().keySet().contains( propertyKey ) )
+                try
                 {
-                    throw new CoreException( SDKCorePlugin.createErrorStatus( "Missing ${" + propertyKey + "} setting in build.properties file." ) );
+                    version = SDKUtil.readSDKVersion( sdkLocation.toOSString() );
+
+                    if( version.equals( ILiferayConstants.V611.toString() ) )
+                    {
+                        Properties buildProperties = getProperties( sdkLocation.append( "build.properties" ).toFile() ); //$NON-NLS-1$
+
+                        if( hasAppServerSpecificProps( buildProperties ) )
+                        {
+                            version = ILiferayConstants.V612.toString();
+                        }
+                    }
+
+                    if( version.equals( ILiferayConstants.V6120.toString() ) )
+                    {
+                        Properties buildProperties = getProperties( sdkLocation.append( "build.properties" ).toFile() ); //$NON-NLS-1$
+
+                        if( hasAppServerSpecificProps( buildProperties ) )
+                        {
+                            version = ILiferayConstants.V6130.toString();
+                        }
+                    }
+                }
+                catch( Exception e )
+                {
+                    SDKCorePlugin.logError( "Could not detect the sdk version.", e); //$NON-NLS-1$
                 }
             }
         }
-        catch( Exception e )
+
+        return version;
+    }
+
+    private boolean hasAppServerSpecificProps( Properties props )
+    {
+        Enumeration<?> names = props.propertyNames();
+
+        while( names.hasMoreElements() )
         {
-            throw new CoreException( SDKCorePlugin.createErrorStatus(e.getMessage()));
+            String name = names.nextElement().toString();
+
+            if( name.matches( "app.server.tomcat.*" ) ) //$NON-NLS-1$
+            {
+                return true;
+            }
         }
 
-        return project.getProperties();
+        return false;
     }
 
     public boolean hasProjectFile()
@@ -852,6 +918,7 @@ public class SDK
     {
         return defaultSDK;
     }
+
 
     public boolean isValid()
     {
@@ -882,18 +949,17 @@ public class SDK
         // setRuntime(sdkElement.getString("runtime"));
     }
 
-
-    private void loadProperties(Project project, final String keyName)
+    private void loadPropertiesFile( Project project, final String fileName )
     {
-        if ( keyName != null )
+        if( project != null && fileName != null )
         {
-            File customerProperties = new File(getLocation().append( "build." + keyName +".properties" ).toPortableString());
+            File propertiesFile = new File( getLocation().append( fileName ).toPortableString() );
 
-            if ( customerProperties.exists() )
+            if( propertiesFile.exists() )
             {
-                Property loadPropetiesTask = new Property();
+                final Property loadPropetiesTask = new Property();
                 loadPropetiesTask.setProject( project );
-                loadPropetiesTask.setFile( customerProperties );
+                loadPropetiesTask.setFile( propertiesFile );
                 loadPropetiesTask.execute();
             }
         }
@@ -1005,6 +1071,11 @@ public class SDK
 
     public IStatus validate()
     {
+        return validate( false );
+    }
+
+    public IStatus validate( final boolean reload )
+    {
         MultiStatus status = new MultiStatus( SDKCorePlugin.PLUGIN_ID, IStatus.OK, "", null );
 
         boolean validLocation = SDKUtil.isValidSDKLocation( getLocation().toOSString() );
@@ -1023,71 +1094,68 @@ public class SDK
             return status;
         }
 
+        Map<String,Object> sdkProperties = null;
+
         try
         {
-            Map<String, Object> sdkProperties = getBuildProperties();
+            sdkProperties = getBuildProperties( reload );
+
             if ( sdkProperties == null )
             {
-                status.add( SDKCorePlugin.createErrorStatus( "Could not find any sdk settting." ) );
+                status.add( SDKCorePlugin.createErrorStatus( "Could not find any sdk settings." ) );
+
                 return status;
             }
+        }
+        catch( Exception e)
+        {
+            status.add( SDKCorePlugin.createErrorStatus( e.getMessage() ) );
 
-            for( String propertyKey : sdkProperties.keySet() )
-            {
-                final String propertyValue = (String)sdkProperties.get( propertyKey );
-
-                if ( propertyValue == null )
-                {
-                    status.add( SDKCorePlugin.createErrorStatus( propertyKey + " is null." ) );
-                }
-                else
-                {
-                    switch (propertyKey)
-                    {
-                        case "app.server.type":
-                        {
-                            if( !SUPPORT_SERVER_TYPES.contains( propertyValue ) )
-                            {
-                                status.add( SDKCorePlugin.createErrorStatus( "The " + propertyKey + "(" + propertyValue +
-                                    ") server is not supported by Liferay IDE." ) );
-                            }
-
-                            break;
-                        }
-
-                        case "app.server.dir":
-                        case "app.server.deploy.dir":
-                        case "app.server.lib.global.dir":
-                        case "app.server.parent.dir":
-                        case "app.server.portal.dir":
-                        {
-                            IPath propertyPath = new Path( propertyValue );
-
-                            if( !propertyPath.isAbsolute() )
-                            {
-                                status.add( SDKCorePlugin.createErrorStatus( "The " + propertyKey + "(" + propertyValue +
-                                    ") is not absolute path." ) );
-                            }
-
-                            if( !propertyPath.toFile().exists() )
-                            {
-                                status.add( SDKCorePlugin.createErrorStatus( "The " + propertyKey + "(" + propertyValue +
-                                    ") is not exsit." ) );
-                            }
-
-                            break;
-                        }
-                        default:
-                        {
-                        }
-                    }
-                }
-            }
             return status;
         }
-        catch (CoreException e)
+
+        for( String propertyKey : APP_SERVER_PROPERTIES_KEYS )
         {
-            status.add(SDKCorePlugin.createErrorStatus( e.getMessage() ) );
+            final String propertyValue = (String) sdkProperties.get( propertyKey );
+
+            if ( propertyValue == null )
+            {
+                status.add( SDKCorePlugin.createErrorStatus( propertyKey + " is null." ) );
+            }
+            else
+            {
+                switch (propertyKey)
+                {
+                    case "app.server.type":
+                    {
+                        if( !SUPPORTED_SERVER_TYPES.contains( propertyValue ) )
+                        {
+                            status.add( SDKCorePlugin.createErrorStatus( "The " + propertyKey + "(" +
+                                            propertyValue + ") server is not supported by Liferay IDE." ) );
+                        }
+
+                        break;
+                    }
+
+                    case "app.server.dir":
+                    case "app.server.deploy.dir":
+                    case "app.server.lib.global.dir":
+                    case "app.server.parent.dir":
+                    case "app.server.portal.dir":
+                    {
+                        IPath propertyPath = new Path( propertyValue );
+
+                        if( !propertyPath.toFile().exists() )
+                        {
+                            status.add( SDKCorePlugin.createErrorStatus( "The " + propertyKey + "(" +
+                                            propertyValue + ") is not valid." ) );
+                        }
+
+                        break;
+                    }
+                    default:
+                }
+            }
         }
 
         return status;

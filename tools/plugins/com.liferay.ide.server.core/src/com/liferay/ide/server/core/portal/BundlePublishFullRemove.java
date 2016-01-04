@@ -17,6 +17,7 @@ package com.liferay.ide.server.core.portal;
 
 import com.liferay.ide.core.IBundleProject;
 import com.liferay.ide.core.LiferayCore;
+import com.liferay.ide.core.util.FileUtil;
 import com.liferay.ide.server.core.LiferayServerCore;
 
 import java.io.File;
@@ -31,6 +32,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.wst.server.core.IModule;
 import org.eclipse.wst.server.core.IServer;
+import org.osgi.framework.dto.BundleDTO;
 
 /**
  * @author Gregory Amerson
@@ -38,9 +40,9 @@ import org.eclipse.wst.server.core.IServer;
 public class BundlePublishFullRemove extends BundlePublishOperation
 {
 
-    public BundlePublishFullRemove( IServer server, IModule[] modules )
+    public BundlePublishFullRemove( IServer server, IModule[] modules, BundleSupervisor supervisor, BundleDTO[] existingBundles )
     {
-        super( server, modules );
+        super( server, modules, supervisor, existingBundles );
     }
 
     @Override
@@ -63,12 +65,14 @@ public class BundlePublishFullRemove extends BundlePublishOperation
 
                 if( this.server.getServerState() == IServer.STATE_STARTED )
                 {
-                    status = remoteUninstall( symbolicName );
+                    monitor.subTask( "Remotely undeploying " + module.getName() + " from Liferay module framework..." );
+
+                    status = remoteUninstall( bundleProject, symbolicName );
                 }
 
                 if( status == null || status.isOK() ) // remote uninstall succeedded
                 {
-                    status = localUninstall( symbolicName );
+                    status = localUninstall( bundleProject, symbolicName );
                 }
 
                 if( status.isOK() )
@@ -99,46 +103,71 @@ public class BundlePublishFullRemove extends BundlePublishOperation
 
             for( File f : files )
             {
-                if( f.isDirectory() )
-                {
-                    findFilesInPath( f, pattern, retval );
-                }
-                else if( f.getName().contains( pattern ) )
+                if( f.getName().contains( pattern ) && !retval.contains( f ) )
                 {
                     retval.add( f );
+                }
+                else if( f.isDirectory() )
+                {
+                    findFilesInPath( f, pattern, retval );
                 }
             }
         }
     }
 
-    private IStatus localUninstall( String symbolicName )
+    private IStatus localUninstall( IBundleProject bundleProject , String symbolicName )
     {
         IStatus retval = null;
 
         final PortalRuntime runtime = (PortalRuntime) server.getRuntime().loadAdapter( PortalRuntime.class, null );
 
-        final IPath modulesPath = runtime.getPortalBundle().getModulesPath();
-
         final List<File> moduleFiles = new ArrayList<File>();
 
         // TODO this may not always match
+        final IPath modulesPath = runtime.getPortalBundle().getModulesPath();
         findFilesInPath( modulesPath.toFile(), symbolicName, moduleFiles );
 
         final IPath deployPath = runtime.getPortalBundle().getAutoDeployPath();
         findFilesInPath( deployPath.toFile(), symbolicName, moduleFiles );
+
+        final IPath appServerDeployPath = runtime.getPortalBundle().getAppServerDeployDir();
+        findFilesInPath( appServerDeployPath.toFile(), symbolicName, moduleFiles );
+
+        try
+        {
+            IPath outputFile = bundleProject.getOutputBundle( false, null );
+
+            findFilesInPath( modulesPath.toFile(), outputFile.lastSegment(), moduleFiles );
+            findFilesInPath( deployPath.toFile(), outputFile.lastSegment(), moduleFiles );
+            findFilesInPath( appServerDeployPath.toFile(), symbolicName, moduleFiles );
+        }
+        catch( CoreException e )
+        {
+        }
+
+        // look for wabs that have been deployed
+        final IPath appServerDeployDir = runtime.getPortalBundle().getAppServerDeployDir();
+        findFilesInPath( appServerDeployDir.toFile(), symbolicName, moduleFiles );
 
         if( moduleFiles.size() > 0 )
         {
             // TODO convert to multi-statuses
             for( File moduleFile : moduleFiles )
             {
-                if( moduleFile.delete() )
+                if( moduleFile.isDirectory() )
                 {
-                    retval = Status.OK_STATUS;
+                    FileUtil.deleteDir( moduleFile, true );
                 }
                 else
                 {
-                    retval = LiferayServerCore.error( "Could not delete module file " + moduleFile.getName() );
+                    if( moduleFile.exists() && moduleFile.delete() )
+                    {
+                        retval = Status.OK_STATUS;
+                    }
+                    else
+                    {
+                        retval = LiferayServerCore.error( "Could not delete module file " + moduleFile.getName() );
+                    }
                 }
             }
         }
@@ -153,27 +182,42 @@ public class BundlePublishFullRemove extends BundlePublishOperation
         return retval;
     }
 
-    private IStatus remoteUninstall( String symbolicName )
+    private IStatus remoteUninstall( IBundleProject bundleProject , String symbolicName )
     {
         IStatus retval = null;
 
-        final BundleDeployer deployer = getBundleDeployer();
-
-        if( deployer != null )
+        if( symbolicName != null && _existingBundles != null && _supervisor != null )
         {
             try
             {
-                deployer.uninstallBundle( symbolicName );
-                retval = Status.OK_STATUS;
+                for( BundleDTO bundle : _existingBundles )
+                {
+                    if( symbolicName.equals( bundle.symbolicName ) )
+                    {
+                        String error = _supervisor.getAgent().uninstall( bundle.id );
+
+                        if( error == null )
+                        {
+                            retval = Status.OK_STATUS;
+                        }
+                        else
+                        {
+                            retval = LiferayServerCore.error( "Unable to uninstall bundle " + error );
+                        }
+
+                        break;
+                    }
+                }
             }
             catch( Exception e )
             {
-                retval = LiferayServerCore.error( "Unable to uninstall bundle" + symbolicName, e );
+                retval = LiferayServerCore.error( "Unable to uninstall bundle " + symbolicName, e );
             }
         }
-        else
+
+        if( retval == null )
         {
-            retval = LiferayServerCore.error( "Unable to uninstall bundle" + symbolicName );
+            retval = Status.OK_STATUS;
         }
 
         return retval;
