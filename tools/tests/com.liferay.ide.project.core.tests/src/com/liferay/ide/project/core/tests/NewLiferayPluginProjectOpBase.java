@@ -652,8 +652,7 @@ public abstract class NewLiferayPluginProjectOpBase extends ProjectCoreBase
         IProject project = getProject( "portlets", "test-sdk-" + getRuntimeVersion() + "-portlet" );
         project.delete( false, false, null );
         op.setSdkLocation( sdkLocation.toOSString() );
-        assertTrue( op.validation().message().contains(
-            "is not valid because a project already exists at that location." ) );
+        assertTrue( op.validation().message().contains( "is not valid because a project already exists at that location." ) );
 
         op = newProjectOp( "test2-sdk" );
 

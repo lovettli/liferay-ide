@@ -15,6 +15,7 @@
 package com.liferay.ide.maven.core;
 
 import com.liferay.ide.core.IBundleProject;
+import com.liferay.ide.core.util.FileUtil;
 import com.liferay.ide.maven.core.util.DefaultMaven2OsgiConverter;
 import com.liferay.ide.project.core.IProjectBuilder;
 import com.liferay.ide.server.remote.IRemoteServerPublisher;
@@ -33,7 +34,6 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.m2e.core.project.IMavenProjectFacade;
-
 
 /**
  * @author Gregory Amerson
@@ -170,6 +170,30 @@ public class MavenBundlePluginProject extends LiferayMavenProject implements IBu
         if( filterResource( resourcePath, ignorePaths ) )
         {
             return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public boolean isFragmentBundle()
+    {
+        final IFile bndFile = getProject().getFile( "bnd.bnd" );
+
+        if( bndFile.exists() )
+        {
+            try
+            {
+                String content = FileUtil.readContents( bndFile.getContents() );
+
+                if( content.contains( "Fragment-Host" ) )
+                {
+                    return true;
+                }
+            }
+            catch( Exception e )
+            {
+            }
         }
 
         return false;

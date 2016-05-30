@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?pde version="3.5"?>
 
-<product name="Liferay IDE Hidden Features" uid="com.liferay.ide-repository.hidden.features" id="com.liferay.ide-repository.hidden.features" application="org.eclipse.ui.ide.workbench" version="3.0.0.qualifier" useFeatures="true" includeLaunchers="false">
+<product name="Liferay IDE Hidden Features" uid="com.liferay.ide-repository.hidden.features" id="com.liferay.ide-repository.hidden.features" application="org.eclipse.ui.ide.workbench" version="3.0.1.qualifier" useFeatures="true" includeLaunchers="false">
 
    <aboutInfo>
    </aboutInfo>
@@ -30,11 +30,9 @@
    </plugins>
 
    <features>
-      <feature id="bndtools.main.feature" />
       <feature id="com.liferay.ide.hidden" />
       <feature id="org.apache.ivyde.feature" />
       <feature id="org.apache.ivy.feature" />
-      <feature id="org.eclipse.buildship" />
       <feature id="org.eclipse.m2e.feature" />
       <feature id="org.eclipse.m2e.logback.feature" />
       <feature id="org.eclipse.m2e.wtp.feature" />

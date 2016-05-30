@@ -16,6 +16,7 @@
 package com.liferay.ide.gradle.core;
 
 import com.liferay.blade.gradle.model.CustomModel;
+import com.liferay.ide.core.LiferayCore;
 import com.liferay.ide.core.LiferayNature;
 import com.liferay.ide.core.util.CoreUtil;
 import com.liferay.ide.project.core.util.LiferayWorkspaceUtil;
@@ -61,6 +62,8 @@ public class GradleCore extends Plugin
     public static final String PLUGIN_ID = "com.liferay.ide.gradle.core";
 
     public static final String JobFamilyId = "CheckingGradleConfiguration";
+
+    public static final File customModelCache = LiferayCore.GLOBAL_SETTINGS_PATH.toFile();
 
     public static IStatus createErrorStatus( Exception ex )
     {
@@ -108,8 +111,7 @@ public class GradleCore extends Plugin
         try
         {
             retval =
-                GradleTooling.getModel(
-                    modelClass, gradleCore.getStateLocation().append( "cache" ).toFile(), projectDir );
+                GradleTooling.getModel( modelClass, customModelCache, projectDir );
         }
         catch( Exception e )
         {
@@ -165,9 +167,7 @@ public class GradleCore extends Plugin
                                 GradleCore.createErrorStatus( "Unable to get read gradle configuration" ) );
                         }
 
-                        if( customModel.hasPlugin( "aQute.bnd.gradle.BndBuilderPlugin" ) ||
-                            customModel.hasPlugin( "com.liferay.gradle.plugins.LiferayPlugin" ) ||
-                            customModel.hasPlugin( "com.liferay.gradle.plugins.gulp.GulpPlugin" ) )
+                        if( customModel.isLiferayModule() )
                         {
                             LiferayNature.addLiferayNature( project, monitor );
                         }

@@ -2,7 +2,7 @@
 <feature
       id="com.liferay.ide.eclipse.tools"
       label="Liferay IDE"
-      version="3.0.0.qualifier"
+      version="3.0.1.qualifier"
       provider-name="Liferay, Inc."
       plugin="com.liferay.ide.ui">
 
@@ -32,10 +32,11 @@
    </license>
 
    <requires>
-      <import feature="bndtools.main.feature" version="3.1.1" match="greaterOrEqual"/>
+      <import feature="bndtools.main.feature" version="3.2.0" match="greaterOrEqual"/>
+      <import feature="com.liferay.blade.tools" version="1.1.0" match="greaterOrEqual"/>
       <import feature="org.apache.ivy.feature" version="2.3.0" match="greaterOrEqual"/>
       <import feature="org.apache.ivyde.feature" version="2.2.0" match="greaterOrEqual"/>
-      <import feature="org.eclipse.buildship" version="1.0.11" match="greaterOrEqual"/>
+      <import feature="org.eclipse.buildship" version="1.0.15" match="greaterOrEqual"/>
       <import feature="org.eclipse.jsf.feature" version="3.2.0" match="greaterOrEqual"/>
       <import feature="org.eclipse.jst.common.fproj.enablement.jdt" version="3.2.0" match="greaterOrEqual"/>
       <import feature="org.eclipse.jst.enterprise_ui.feature" version="3.2.0" match="greaterOrEqual"/>
@@ -60,8 +61,8 @@
       <import feature="org.eclipse.wst.web_ui.feature" version="3.2.0" match="greaterOrEqual"/>
       <import feature="org.eclipse.wst.xml_ui.feature" version="3.2.0" match="greaterOrEqual"/>
       <import feature="org.eclipse.wst.xml.search.core-feature" version="1.0.0" match="greaterOrEqual"/>
-      <import feature="org.eclipse.tm.terminal.connector.telnet.feature" version="4.0.0" match="greaterOrEqual" />
-      <import feature="org.eclipse.tm.terminal.view.feature" version="4.0.0" match="greaterOrEqual" />
+      <import feature="org.eclipse.tm.terminal.connector.telnet.feature" version="4.0.0" match="greaterOrEqual"/>
+      <import feature="org.eclipse.tm.terminal.view.feature" version="4.0.0" match="greaterOrEqual"/>
    </requires>
 
    <plugin
@@ -201,6 +202,13 @@
          unpack="false"/>
 
    <plugin
+         id="com.liferay.ide.ui.notifications"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+   <plugin
          id="com.liferay.ide.ui.snippets"
          download-size="0"
          install-size="0"
@@ -209,62 +217,6 @@
 
    <plugin
          id="com.liferay.ide.xml.search.ui"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="biz.aQute.bndlib"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="biz.aQute.remote.api"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="biz.aQute.repository"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.liferay.blade.api"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.liferay.blade.eclipse.provider"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.liferay.blade.upgrade.liferay70"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.liferay.blade.gradle.model"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="com.liferay.blade.gradle.plugin"
          download-size="0"
          install-size="0"
          version="0.0.0"
@@ -290,4 +242,5 @@
          install-size="0"
          version="0.0.0"
          unpack="false"/>
+
 </feature>
