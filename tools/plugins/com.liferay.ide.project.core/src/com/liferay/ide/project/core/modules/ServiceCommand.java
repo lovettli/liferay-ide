@@ -182,6 +182,7 @@ public class ServiceCommand
         if( _serviceName == null )
         {
             result = getServices( supervisor );
+            updateServicesStaticFile( result, supervisor );
         }
         else
         {
