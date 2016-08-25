@@ -18,6 +18,7 @@ import org.eclipse.sapphire.InitialValueService;
 import org.eclipse.sapphire.Value;
 
 import com.liferay.ide.project.core.upgrade.CodeUpgradeOp;
+import com.liferay.ide.project.core.upgrade.ICodeUpgradleConstants;
 
 /**
  * @author Lovett Li
@@ -35,13 +36,13 @@ public class ProjectNameDefaultValueService extends InitialValueService
 
         if( projectName.empty() )
         {
-            if( layout.equals( "Upgrade to liferay plugin sdk 7" ) )
+            if( layout.equals( ICodeUpgradleConstants.LAYOUT_UPGRADE_TO_LIFERAY_PLUGIN_SDK_7 ) )
             {
-                op.setProjectName( "plugins.sdk-7.0" );
+                op.setProjectName( ICodeUpgradleConstants.PROJECT_NAME_PLUGIN_SDK_7 );
             }
             else
             {
-                op.setProjectName( "liferay-workspace" );
+                op.setProjectName( ICodeUpgradleConstants.PROJECT_NAME_LIFERAY_WORKSPACE );
             }
         }
     }
