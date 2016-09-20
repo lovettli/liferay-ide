@@ -95,6 +95,7 @@ public interface NewLiferayModuleProjectOp extends BaseModuleOp
     @Label( standard = "Service Name" )
     @Required
     @Service( impl = ServicePossibleValuesService.class )
+    @Service( impl = ServiceDefaultValuesService.class )
     @Service( impl = ServiceNameValidataionService.class )
     ValueProperty PROP_SERVICE_NAME = new ValueProperty( TYPE, "ServiceName" );
 
@@ -106,6 +107,7 @@ public interface NewLiferayModuleProjectOp extends BaseModuleOp
     @DefaultValue( text = "com.example" )
     @Label( standard = "Package Name" )
     @Service( impl = PackageNameValidationService.class )
+    @Service( impl = PackageNameDefaultValueService.class )
     ValueProperty PROP_PACKAGE_NAME = new ValueProperty( TYPE, "PackageName" );
 
     Value<String> getPackageName();

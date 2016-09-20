@@ -1031,6 +1031,12 @@
          point="org.eclipse.ui.commands">
         <command
             categoryId="com.liferay.ide.project.ui.handlers"
+            description="Compare File"
+            id="com.liferay.ide.project.ui.sdk.command.CompareFile"
+            name="Compare File">
+        </command>
+        <command
+            categoryId="com.liferay.ide.project.ui.handlers"
             description="All SDK command"
             id="com.liferay.ide.project.ui.sdk.command.all"
             name="All SDK Command">
@@ -1129,6 +1135,10 @@
 
    <extension
          point="org.eclipse.ui.handlers">
+       <handler
+            class="com.liferay.ide.project.ui.handlers.CompareFileHandler"
+            commandId="com.liferay.ide.project.ui.sdk.command.CompareFile">
+      </handler>
       <handler
             class="com.liferay.ide.project.ui.handlers.AllSDKHandler"
             commandId="com.liferay.ide.project.ui.sdk.command.all">
@@ -1209,6 +1219,15 @@
              name="Liferay 7 Migration Problems"
              restorable="true">
       </view>
+      <view
+             allowMultiple="false"
+             category="com.liferay.ide.project.ui.liferay"
+             class="com.liferay.ide.project.ui.upgrade.animated.UpgradeView"
+             icon="icons/e16/migration-tasks.png"
+             id="com.liferay.ide.project.ui.upgradeView"
+             name="Liferay 7 Upgrade View"
+             restorable="true">
+      </view>
       <!--view
             allowMultiple="false"
             category="com.liferay.ide.project.ui.liferay"
@@ -1267,11 +1286,6 @@
             id="com.liferay.ide.project.ui.upgrade.findJavaProblems"
             name="Liferay 7 Find Java Problems">
       </command>
-      <command
-            description="Convert JSP Hook into fragments"
-            id="com.liferay.ide.project.ui.upgrade.convertJspHookFragments"
-            name="Liferay 7 Convert JSP Hooks">
-      </command>
    </extension>
    <extension point="org.eclipse.ui.commandImages">
       <image
@@ -1323,10 +1337,6 @@
        <handler
          commandId="com.liferay.ide.project.ui.upgrade.findJavaProblems"
          class="com.liferay.ide.project.ui.upgrade.FindJavaProblemsHandler">
-       </handler>
-       <handler
-         commandId="com.liferay.ide.project.ui.upgrade.convertJspHookFragments"
-         class="com.liferay.ide.project.ui.upgrade.ConvertJspHookFragmentsHandler">
        </handler>
    </extension>
 
@@ -1550,6 +1560,56 @@
       </menuContribution>
    </extension>
    <extension
+         point="org.eclipse.ui.menus">
+       <menuContribution
+            allPopups="false"
+            locationURI="popup:org.eclipse.ui.popup.any?after=additions">
+         <menu
+               icon="icons/e16/liferay_logo_16.png"
+               label="Liferay">
+                <visibleWhen
+                   checkEnabled="false">
+                   <or>
+                     <with
+                       variable="activeMenuSelection">
+                       <count value="1"></count>
+                         <reference definitionId="com.liferay.comparetheme.definition"/>
+                     </with>
+                     <with
+                          variable="activeMenuEditorInput">
+                             <reference definitionId="com.liferay.comparetheme.definition"/>
+                      </with>
+                      </or>
+                 </visibleWhen>
+            <command
+                  commandId="com.liferay.ide.project.ui.sdk.command.CompareFile"
+                  label="Compare With Original"
+                  style="push">
+            </command>
+         </menu>
+      </menuContribution>
+   </extension>
+   <extension point="org.eclipse.core.expressions.definitions">
+    <definition id="com.liferay.comparetheme.definition">
+        <iterate>
+               <or>
+                 <adapt type="org.eclipse.core.resources.IResource">
+                   <test property="org.eclipse.core.resources.extension" value="ftl" />
+                 </adapt>
+                 <adapt type="org.eclipse.core.resources.IResource">
+                   <test property="org.eclipse.core.resources.extension" value="vm" />
+                 </adapt>
+                 <adapt type="org.eclipse.core.resources.IResource">
+                   <test property="org.eclipse.core.resources.extension" value="css" />
+                 </adapt>
+                 <adapt type="org.eclipse.core.resources.IResource">
+                   <test property="org.eclipse.core.resources.extension" value="scss" />
+                 </adapt>
+              </or>
+        </iterate>
+    </definition>
+  </extension>
+   <extension
         point="org.eclipse.ui.editors">
         <editor
             id="com.liferay.ide.upgrade.ui.CodeUpgradeTool"
@@ -1563,4 +1623,27 @@
             </class>
         </editor>
     </extension>
+
+   <extension
+         id="component.properties.proposal"
+         name="OSGI Component Properties Proposal Computer"
+         point="org.eclipse.jdt.ui.javaCompletionProposalComputer">
+         <proposalCategory icon="icons/e16/liferay.png"/>
+   </extension>
+   <extension
+         id="component.properties.proposal.computer"
+         point="org.eclipse.jdt.ui.javaCompletionProposalComputer">
+         <javaCompletionProposalComputer
+			needsSortingAfterFiltering="false"
+			class="com.liferay.ide.project.ui.jdt.ComponentPropertiesCompletionProposalComputer"
+			activate="true"
+			categoryId="component.properties.proposal">
+		</javaCompletionProposalComputer>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors.templates">
+      <include
+            file="templates/java-templates-components.xml">
+      </include>
+   </extension>
 </plugin>

@@ -15,6 +15,14 @@
 
 package com.liferay.ide.project.core.upgrade;
 
+import com.liferay.ide.project.core.upgrade.service.CheckSDKLocationDerivedValueService;
+import com.liferay.ide.project.core.upgrade.service.LayoutPossibleValuesService;
+import com.liferay.ide.project.core.upgrade.service.LiferayServerNameDefaultValueService;
+import com.liferay.ide.project.core.upgrade.service.LiferayServerNamePossibleValuesService;
+import com.liferay.ide.project.core.upgrade.service.LiferayServerNameValidationService;
+import com.liferay.ide.project.core.upgrade.service.SdkLocationDefaultValueService;
+import com.liferay.ide.project.core.upgrade.service.SdkLocationValidationService;
+
 import org.eclipse.sapphire.Element;
 import org.eclipse.sapphire.ElementType;
 import org.eclipse.sapphire.Type;
@@ -23,38 +31,32 @@ import org.eclipse.sapphire.ValueProperty;
 import org.eclipse.sapphire.modeling.Path;
 import org.eclipse.sapphire.modeling.annotations.AbsolutePath;
 import org.eclipse.sapphire.modeling.annotations.DefaultValue;
+import org.eclipse.sapphire.modeling.annotations.Derived;
 import org.eclipse.sapphire.modeling.annotations.FileSystemResourceType;
 import org.eclipse.sapphire.modeling.annotations.Label;
-import org.eclipse.sapphire.modeling.annotations.Listeners;
 import org.eclipse.sapphire.modeling.annotations.Required;
 import org.eclipse.sapphire.modeling.annotations.Service;
 import org.eclipse.sapphire.modeling.annotations.ValidFileSystemResourceType;
 import org.eclipse.sapphire.modeling.xml.annotations.XmlBinding;
-
-import com.liferay.ide.project.core.upgrade.service.LayoutPossibleValuesService;
-import com.liferay.ide.project.core.upgrade.service.LiferayRuntimeNameDefaultValueService;
-import com.liferay.ide.project.core.upgrade.service.LiferayRuntimeNamePossibleValuesService;
-import com.liferay.ide.project.core.upgrade.service.LiferayRuntimeNameValidationService;
-import com.liferay.ide.project.core.upgrade.service.LocationDefaultValueService;
-import com.liferay.ide.project.core.upgrade.service.LocationListener;
 
 @XmlBinding( path = "CodeUpgrade" )
 public interface CodeUpgradeOp extends Element
 {
     ElementType TYPE = new ElementType( CodeUpgradeOp.class );
 
-    @XmlBinding( path = "Location" )
+    @XmlBinding( path = "SdkLocation" )
     @Type( base = Path.class )
     @AbsolutePath
     @ValidFileSystemResourceType( FileSystemResourceType.FOLDER )
     @Required
-    @Service( impl = LocationDefaultValueService.class )
-    @Listeners( LocationListener.class )
-    ValueProperty PROP_LOCATION = new ValueProperty( TYPE, "Location" );
+    @Label( standard = "SDK Location" )
+    @Service( impl = SdkLocationDefaultValueService.class )
+    @Service( impl = SdkLocationValidationService.class )
+    ValueProperty PROP_SDK_LOCATION = new ValueProperty( TYPE, "SdkLocation" );
 
-    Value<Path> getLocation();
-    void setLocation( String location );
-    void setLocation( Path location );
+    Value<Path> getSdkLocation();
+    void setSdkLocation( String sdkLocation );
+    void setSdkLocation( Path sdkLocation );
 
     @XmlBinding( path = "NewLocation" )
     @Type( base = Path.class )
@@ -68,6 +70,7 @@ public interface CodeUpgradeOp extends Element
     void setNewLocation( Path newLocation );
 
     @XmlBinding( path = "ProjectName" )
+    @Required
     ValueProperty PROP_PROJECT_NAME = new ValueProperty( TYPE, "ProjectName" );
 
     Value<String> getProjectName();
@@ -80,15 +83,22 @@ public interface CodeUpgradeOp extends Element
     Value<String> getLayout();
     void setLayout( String Layout );
 
-    @Service( impl = LiferayRuntimeNamePossibleValuesService.class )
-    @Service( impl = LiferayRuntimeNameDefaultValueService.class )
-    @Service( impl = LiferayRuntimeNameValidationService.class )
+    @Service( impl = LiferayServerNamePossibleValuesService.class )
+    @Service( impl = LiferayServerNameDefaultValueService.class )
+    @Service( impl = LiferayServerNameValidationService.class )
     @Required
-    @XmlBinding( path = "RuntimeName" )
-    ValueProperty PROP_LIFERAY_RUNTIME_NAME = new ValueProperty( TYPE, "LiferayRuntimeName" );
+    @XmlBinding( path = "ServerName" )
+    ValueProperty PROP_LIFERAY_SERVER_NAME = new ValueProperty( TYPE, "LiferayServerName" );
 
-    Value<String> getLiferayRuntimeName();
-    void setLiferayRuntimeName( String value );
+    Value<String> getLiferayServerName();
+    void setLiferayServerName( String value );
+
+    @Derived
+    @Service( impl = CheckSDKLocationDerivedValueService.class )
+    ValueProperty PROP_LIFERAY_62SERVER_LOCATION = new ValueProperty( TYPE, "Liferay62ServerLocation" );
+
+    Value<String> getLiferay62ServerLocation();
+    void setLiferay62ServerLocation( String value );
 
     @Type( base = Boolean.class )
     @DefaultValue( text = "false" )

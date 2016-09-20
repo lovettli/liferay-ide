@@ -23,7 +23,7 @@ import com.liferay.ide.core.IBundleProject;
 import com.liferay.ide.core.IResourceBundleProject;
 import com.liferay.ide.core.util.FileUtil;
 import com.liferay.ide.core.util.PropertiesUtil;
-
+import com.liferay.ide.project.core.IProjectBuilder;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,6 +57,25 @@ public class LiferayGradleProject extends BaseLiferayProject implements IBundleP
 {
 
     private static final String[] ignorePaths = new String[] { ".gradle", "build" };
+
+    public <T> T adapt( Class<T> adapterType )
+    {
+        T adapter = super.adapt( adapterType );
+
+        if( adapter != null )
+        {
+            return adapter;
+        }
+
+        if( IProjectBuilder.class.equals( adapterType ) )
+        {
+            final IProjectBuilder projectBuilder = new GradleProjectBuilder( getProject() );
+
+            return adapterType.cast( projectBuilder );
+        }
+
+        return null;
+    }
 
     public static IPath getOutputBundlePath( IProject gradleProject )
     {
@@ -214,7 +233,7 @@ public class LiferayGradleProject extends BaseLiferayProject implements IBundleP
     @Override
     public IFile getDescriptorFile( String name )
     {
-        return null;
+        return getProject().getFile( name );
     }
 
     @Override
@@ -254,7 +273,9 @@ public class LiferayGradleProject extends BaseLiferayProject implements IBundleP
             }
             catch( GradleConnectionException e)
             {
-                throw new CoreException( GradleCore.createErrorStatus( "Unable to build output", e ) );
+                GradleCore.logError( "Unable to build output", e );
+
+                return null;
             }
             finally
             {

@@ -13,22 +13,24 @@
  *
  *******************************************************************************/
 
-package com.liferay.ide.project.ui.upgrade.action;
-
-import org.eclipse.sapphire.ui.Presentation;
+package com.liferay.ide.project.ui.upgrade.animated;
 
 /**
- * @author Terry Jia
+ * @author Simon Jiang
+ * @author Andy Wu
  */
-public class DescriptorsSkipActionHandler extends BaseActionHandler
+public class PageNavigateEvent
 {
 
-    @Override
-    protected Object run( Presentation context )
-    {
-        setOutlineSelection( context, STEP_BUILD_SERVICE );
+    private int targetPageIndex;
 
-        return null;
+    public int getTargetPage()
+    {
+        return this.targetPageIndex;
     }
 
+    public void setTargetPage( int targetPage )
+    {
+        this.targetPageIndex = targetPage;
+    }
 }

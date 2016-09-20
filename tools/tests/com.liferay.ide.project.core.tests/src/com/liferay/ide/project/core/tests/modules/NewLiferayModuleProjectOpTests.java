@@ -22,6 +22,7 @@ import org.junit.Test;
 
 /**
  * @author Simon Jiang
+ * @author Andy Wu
  */
 public class NewLiferayModuleProjectOpTests
 {
@@ -35,7 +36,7 @@ public class NewLiferayModuleProjectOpTests
 
         op.setProjectTemplateName( "Portlet" );
 
-        assertEquals( "MyTestProjectPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
     }
 
     @Test
@@ -47,7 +48,7 @@ public class NewLiferayModuleProjectOpTests
 
         op.setProjectTemplateName( "Portlet" );
 
-        assertEquals( "MyTestProjectPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
     }
 
     @Test
@@ -59,11 +60,11 @@ public class NewLiferayModuleProjectOpTests
 
         op.setProjectTemplateName( "Portlet" );
 
-        assertEquals( "MyTestProjectPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectName( "my_abc-test" );
 
-        assertEquals( "MyAbcTestPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyAbcTest", op.getComponentName().content( true ) );
     }
 
     @Test
@@ -75,27 +76,27 @@ public class NewLiferayModuleProjectOpTests
 
         op.setProjectTemplateName( "Activator" );
 
-        assertEquals( "MyTestProjectActivator", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectTemplateName( "Portlet" );
 
-        assertEquals( "MyTestProjectPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectTemplateName( "MvcPortlet" );
 
-        assertEquals( "MyTestProjectMvcPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectTemplateName( "Service" );
 
-        assertEquals( "MyTestProjectService", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectTemplateName( "ServiceWrapper" );
 
-        assertEquals( "MyTestProjectServiceWrapper", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
 
         op.setProjectTemplateName( "ServiceBuilder" );
 
-        assertEquals( "MyTestProjectServiceBuilder", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
     }
 
     @Test
@@ -107,6 +108,28 @@ public class NewLiferayModuleProjectOpTests
 
         op.setProjectTemplateName( "Portlet" );
 
-        assertEquals( "MyTestProjectPortlet", op.getComponentName().content( true ) );
+        assertEquals( "MyTestProject", op.getComponentName().content( true ) );
+    }
+
+    @Test
+    public void testNewLiferayModuleProjectPackageDefaultValueService() throws Exception
+    {
+        NewLiferayModuleProjectOp op = NewLiferayModuleProjectOp.TYPE.instantiate();
+
+        op.setProjectName( "my-test-project" );
+
+        op.setProjectTemplateName( "Portlet" );
+
+        assertEquals( "my.test.project", op.getPackageName().content( true ) );
+
+        op.setProjectName( "my.test.foo" );
+
+        assertEquals( "my.test.foo", op.getPackageName().content( true ) );
+
+        op.setProjectName( "my_test_foo1" );
+
+        op.setProjectTemplateName( "ServiceWrapper" );
+
+        assertEquals( "my.test.foo1", op.getPackageName().content( true ) );
     }
 }

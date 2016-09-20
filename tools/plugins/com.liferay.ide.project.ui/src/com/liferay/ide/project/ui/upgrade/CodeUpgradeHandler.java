@@ -15,23 +15,19 @@
 
 package com.liferay.ide.project.ui.upgrade;
 
-import java.io.File;
+import com.liferay.ide.ui.LiferayUpgradePerspectiveFactory;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IPerspectiveRegistry;
+import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.ide.IDE;
-
-import com.liferay.ide.project.core.ProjectCore;
 
 /**
  * @author Terry Jia
+ * @author Lovett Li
  */
 public class CodeUpgradeHandler extends AbstractHandler
 {
@@ -39,29 +35,13 @@ public class CodeUpgradeHandler extends AbstractHandler
     @Override
     public Object execute( ExecutionEvent event ) throws ExecutionException
     {
-        final IPath stateLocation = ProjectCore.getDefault().getStateLocation();
+        IWorkbench workbench = PlatformUI.getWorkbench();
+        IWorkbenchWindow window = workbench.getActiveWorkbenchWindow();
 
-        File stateDir = stateLocation.toFile();
-
-        final File codeUpgradeFile = new File( stateDir, "liferay-code-upgrade.xml" );
-
-        try
+        if( window != null )
         {
-            if( codeUpgradeFile.exists() )
-            {
-                codeUpgradeFile.delete();
-            }
-
-            codeUpgradeFile.createNewFile();
-
-            IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-
-            IFileStore fileStore = EFS.getLocalFileSystem().getStore( new Path( codeUpgradeFile.getPath() ) );
-
-            IDE.openEditorOnFileStore( page, fileStore );
-        }
-        catch( Exception e )
-        {
+            IPerspectiveRegistry reg = workbench.getPerspectiveRegistry();
+            window.getActivePage().setPerspective( reg.findPerspectiveWithId( LiferayUpgradePerspectiveFactory.ID ) );
         }
 
         return null;

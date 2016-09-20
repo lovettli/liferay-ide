@@ -13,39 +13,29 @@
  *
  *******************************************************************************/
 
-package com.liferay.ide.project.core.upgrade.service;
+package com.liferay.ide.project.ui.upgrade.action;
 
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.sapphire.DefaultValueService;
-
-import com.liferay.ide.sdk.core.SDKUtil;
+import org.eclipse.sapphire.modeling.Status;
+import org.eclipse.sapphire.ui.Presentation;
+import org.eclipse.sapphire.ui.SapphireActionHandler;
+import org.eclipse.sapphire.ui.forms.swt.SwtPresentation;
+import org.eclipse.wst.server.ui.ServerUIUtil;
 
 /**
  * @author Terry Jia
+ * @author Joye Luo
+ * @author Andy Wu
  */
-public class LocationDefaultValueService extends DefaultValueService
+public class CodeUpgradeNewLiferayServerAction extends SapphireActionHandler
 {
 
     @Override
-    protected String compute()
+    protected Object run( Presentation context )
     {
-        String retVal = "";
+        ServerUIUtil.showNewServerWizard( ( (SwtPresentation) context ).shell(), "liferay.bundle", null,
+            "com.liferay." );
 
-        try
-        {
-            IProject sdk = SDKUtil.getWorkspaceSDKProject();
-
-            if( sdk != null )
-            {
-                retVal = sdk.getLocation().toString();
-            }
-        }
-        catch( CoreException e )
-        {
-        }
-
-        return retVal;
+        return Status.createOkStatus();
     }
 
 }

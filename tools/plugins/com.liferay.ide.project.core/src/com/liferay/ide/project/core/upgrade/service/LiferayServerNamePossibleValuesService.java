@@ -23,14 +23,14 @@ import java.util.Set;
 import org.eclipse.sapphire.PossibleValuesService;
 import org.eclipse.sapphire.Value;
 import org.eclipse.sapphire.modeling.Status;
-import org.eclipse.wst.server.core.IRuntime;
-import org.eclipse.wst.server.core.IRuntimeLifecycleListener;
+import org.eclipse.wst.server.core.IServer;
+import org.eclipse.wst.server.core.IServerLifecycleListener;
 import org.eclipse.wst.server.core.ServerCore;
 
 /**
  * @author Terry Jia
  */
-public class LiferayRuntimeNamePossibleValuesService extends PossibleValuesService implements IRuntimeLifecycleListener
+public class LiferayServerNamePossibleValuesService extends PossibleValuesService implements IServerLifecycleListener
 {
 
     @Override
@@ -38,21 +38,21 @@ public class LiferayRuntimeNamePossibleValuesService extends PossibleValuesServi
     {
         super.initPossibleValuesService();
 
-        ServerCore.addRuntimeLifecycleListener( this );
+        ServerCore.addServerLifecycleListener( this );
     }
 
     @Override
     protected void compute( Set<String> values )
     {
-        IRuntime[] runtimes = ServerCore.getRuntimes();
+        IServer[] servers = ServerCore.getServers();
 
-        if( !CoreUtil.isNullOrEmpty( runtimes ) )
+        if( !CoreUtil.isNullOrEmpty( servers ) )
         {
-            for( IRuntime runtime : runtimes )
+            for( IServer server : servers )
             {
-                if( LiferayServerCore.newPortalBundle( runtime.getLocation() ) != null )
+                if( LiferayServerCore.newPortalBundle( server.getRuntime().getLocation() ) != null )
                 {
-                    values.add( runtime.getName() );
+                    values.add( server.getName() );
                 }
             }
         }
@@ -67,7 +67,7 @@ public class LiferayRuntimeNamePossibleValuesService extends PossibleValuesServi
     @Override
     public Status problem( Value<?> value )
     {
-        if(  value.content().equals( "<None>" ) )
+        if( value.content().equals( "<None>" ) )
         {
             return Status.createOkStatus();
         }
@@ -75,17 +75,20 @@ public class LiferayRuntimeNamePossibleValuesService extends PossibleValuesServi
         return super.problem( value );
     }
 
-    public void runtimeAdded( IRuntime runtime )
+    @Override
+    public void serverAdded( IServer server )
     {
         refresh();
     }
 
-    public void runtimeChanged( IRuntime runtime )
+    @Override
+    public void serverChanged( IServer server )
     {
         refresh();
     }
 
-    public void runtimeRemoved( IRuntime runtime )
+    @Override
+    public void serverRemoved( IServer arg0 )
     {
         refresh();
     }

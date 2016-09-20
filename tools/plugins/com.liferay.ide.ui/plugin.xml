@@ -44,6 +44,12 @@
             id="com.liferay.ide.eclipse.ui.perspective.liferayworkspace"
             name="Liferay Workspace">
       </perspective>
+      <perspective
+            class="com.liferay.ide.ui.LiferayUpgradePerspectiveFactory"
+            icon="icons/liferay_logo_16.png"
+            id="com.liferay.ide.eclipse.ui.perspective.liferaycodeupgrade"
+            name="Liferay Code Upgrade">
+      </perspective>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
@@ -70,6 +76,9 @@
          <newWizardShortcut
                id="com.liferay.ide.eclipse.portlet.ui.wizard.servicebuilder">
          </newWizardShortcut>
+         <newWizardShortcut
+               id="com.liferay.ide.project.ui.newModuleFragmentFilesWizard">
+         </newWizardShortcut>
       </perspectiveExtension>
       <perspectiveExtension
             targetID="org.eclipse.jdt.ui.JavaPerspective">
@@ -93,6 +102,9 @@
          </newWizardShortcut>
          <newWizardShortcut
                id="com.liferay.ide.eclipse.portlet.ui.wizard.servicebuilder">
+         </newWizardShortcut>
+         <newWizardShortcut
+               id="com.liferay.ide.project.ui.newModuleFragmentFilesWizard">
          </newWizardShortcut>
       </perspectiveExtension>
    </extension>

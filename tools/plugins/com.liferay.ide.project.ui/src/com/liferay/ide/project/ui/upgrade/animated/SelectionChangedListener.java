@@ -1,5 +1,4 @@
 /*******************************************************************************
-/*******************************************************************************
  * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
@@ -14,29 +13,14 @@
  *
  *******************************************************************************/
 
-package com.liferay.ide.project.ui.upgrade.action;
-
-import org.eclipse.sapphire.ui.Presentation;
-
-import com.liferay.ide.project.core.upgrade.CodeUpgradeOp;
-import com.liferay.ide.project.ui.action.NewLiferayRuntimeAction;
+package com.liferay.ide.project.ui.upgrade.animated;
 
 /**
- * @author Terry Jia
+ * @author Simon Jiang
  */
-public class CodeUpgradeNewLiferayRuntimeAction extends NewLiferayRuntimeAction
+public interface SelectionChangedListener
 {
 
-    @Override
-    protected Object run( Presentation context )
-    {
-        Object status = super.run( context );
-
-        CodeUpgradeOp op = context.part().getModelElement().nearest( CodeUpgradeOp.class );
-
-        op.property( CodeUpgradeOp.PROP_LIFERAY_RUNTIME_NAME ).refresh();
-
-        return status;
-    }
+    public void onSelectionChanged( int targetSelection );
 
 }

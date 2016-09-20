@@ -20,17 +20,22 @@ import com.liferay.ide.project.core.util.TargetPlatformUtil;
 import com.liferay.ide.server.core.portal.PortalRuntime;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
 
+import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.FileLocator;
@@ -61,7 +66,7 @@ public class ServiceWrapperCommand
         this._serviceWrapperName = _serviceWrapperName;
     }
 
-    public String[] getServiceWrapper() throws Exception
+    public ServiceContainer execute() throws Exception
     {
 
         if( _server == null )
@@ -70,9 +75,21 @@ public class ServiceWrapperCommand
         }
         else
         {
-            String[] wrappers = getDynamicServiceWrapper();
+            Map<String, String[]> dynamicServiceWrappers = getDynamicServiceWrapper();
+            ServiceContainer result;
 
-            return wrappers;
+            if( _serviceWrapperName == null )
+            {
+                result =
+                    new ServiceContainer( Arrays.asList( dynamicServiceWrappers.keySet().toArray( new String[0] ) ) );
+            }
+            else
+            {
+                String[] wrapperBundle = dynamicServiceWrappers.get( _serviceWrapperName );
+                result = new ServiceContainer( wrapperBundle[0], wrapperBundle[1] ,wrapperBundle[2] );
+            }
+
+            return result;
         }
     }
 
@@ -90,13 +107,13 @@ public class ServiceWrapperCommand
         throw new FileNotFoundException( "can't find static services file wrappers-static.json" );
     }
 
-    private String[] getDynamicServiceWrapper()
+    private  Map<String,String[]> getDynamicServiceWrapper() throws IOException
     {
         final IPath bundleLibPath =
             ( (PortalRuntime) _server.getRuntime().loadAdapter( PortalRuntime.class, null ) ).getAppServerLibGlobalDir();
         final IPath bundleServerPath =
             ( (PortalRuntime) _server.getRuntime().loadAdapter( PortalRuntime.class, null ) ).getAppServerDir();
-        final List<String> wrapperList = new ArrayList<>();
+        final Map<String, String[]> map = new LinkedHashMap<>();
         List<File> libFiles;
         File portalkernelJar = null;
 
@@ -148,7 +165,7 @@ public class ServiceWrapperCommand
                                         {
                                             String entryName = nextJarEntry.getName();
 
-                                            getServiceWrapperList( wrapperList, entryName );
+                                            getServiceWrapperList( map, entryName, jarInputStream );
                                         }
 
                                     }
@@ -165,14 +182,15 @@ public class ServiceWrapperCommand
                                 }
                             }
                         }
-                        catch( IOException e )
-                        {
-                        }
                     }
                     else if( lib.getName().endsWith( "api.jar" ) || lib.getName().equals( "portal-kernel.jar" ) )
                     {
+                        JarInputStream jarinput = null;
+
                         try(JarFile jar = new JarFile( lib ))
                         {
+                            jarinput = new JarInputStream( new FileInputStream( lib ) );
+
                             Enumeration<JarEntry> enu = jar.entries();
 
                             while( enu.hasMoreElements() )
@@ -180,11 +198,19 @@ public class ServiceWrapperCommand
                                 JarEntry entry = enu.nextElement();
                                 String name = entry.getName();
 
-                                getServiceWrapperList( wrapperList, name );
+                                getServiceWrapperList( map, name, jarinput );
                             }
                         }
                         catch( IOException e )
                         {
+                        }
+                        finally
+                        {
+
+                            if( jarinput != null )
+                            {
+                                    jarinput.close();
+                            }
                         }
                     }
                 }
@@ -194,22 +220,41 @@ public class ServiceWrapperCommand
         {
         }
 
-        return wrapperList.toArray( new String[0] );
+        return map;
     }
 
-    private void getServiceWrapperList( final List<String> wrapperList, String name )
+    private void getServiceWrapperList( final Map<String,String[]> wrapperMap, String name, JarInputStream jarInputStream  )
     {
         if( name.endsWith( "ServiceWrapper.class" ) && !( name.contains( "$" ) ) )
         {
             name = name.replaceAll( "\\\\", "." ).replaceAll( "/", "." );
             name = name.substring( 0, name.lastIndexOf( "." ) );
-            wrapperList.add( name );
+            Attributes mainAttributes = jarInputStream.getManifest().getMainAttributes();
+            String bundleName = mainAttributes.getValue( "Bundle-SymbolicName" );
+            String version = mainAttributes.getValue( "Bundle-Version" );
+            String group = "";
+
+            if( bundleName.equals( "com.liferay.portal.kernel" ) )
+            {
+                group = "com.liferay.portal";
+            }
+            else
+            {
+                int ordinalIndexOf = StringUtils.ordinalIndexOf( bundleName, ".", 2 );
+
+                if( ordinalIndexOf != -1 )
+                {
+                    group = bundleName.substring( 0, ordinalIndexOf );
+                }
+            }
+
+            wrapperMap.put( name, new String[] { group, bundleName, version } );
         }
     }
 
-    private String[] getServiceWrapperFromTargetPlatform() throws Exception
+    private ServiceContainer getServiceWrapperFromTargetPlatform() throws Exception
     {
-        String[] result;
+        ServiceContainer result;
 
         if( _serviceWrapperName == null )
         {
@@ -223,7 +268,7 @@ public class ServiceWrapperCommand
         return result;
     }
 
-    private void updateServiceWrapperStaticFile( final String[] wrapperList ) throws Exception
+    private void updateServiceWrapperStaticFile( final Map<String, String[]> wrappers ) throws Exception
     {
         final File wrappersFile = checkStaticWrapperFile();
         final ObjectMapper mapper = new ObjectMapper();
@@ -236,7 +281,7 @@ public class ServiceWrapperCommand
             {
                 try
                 {
-                    mapper.writeValue( wrappersFile, wrapperList );
+                    mapper.writeValue( wrappersFile, wrappers );
                 }
                 catch( IOException e )
                 {

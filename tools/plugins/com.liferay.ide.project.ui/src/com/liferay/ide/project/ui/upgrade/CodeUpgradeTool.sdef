@@ -19,21 +19,53 @@
 				<section>
 					<content>
 						<label>Welcome to Liferay Code Upgrade Tool</label>
-						<actuator>
-							<action-id>WelcomeNextAction</action-id>
-							<action>
-								<id>WelcomeNextAction</id>
-								<label>Next</label>
-							</action>
-							<action-handler>
-								<id>WelcomeNextAction</id>
-								<action>WelcomeNextAction</action>
-								<impl>com.liferay.ide.project.ui.upgrade.action.WelcomeNextActionHandler
-								</impl>
-							</action-handler>
-							<horizontal-align>right</horizontal-align>
-							<style>Sapphire.Actuator.Button</style>
-						</actuator>
+						<split-form>
+                            <block>
+                                <content>
+                                </content>
+                                <weight>8</weight>
+                            </block>
+                            <block>
+                                <content>
+                                    <actuator>
+                                        <action-id>RerunAction</action-id>
+                                        <action>
+                                            <id>RerunAction</id>
+                                            <label>Rerun</label>
+                                        </action>
+                                        <action-handler>
+                                            <id>RerunAction</id>
+                                            <action>RerunAction</action>
+                                            <impl>com.liferay.ide.project.ui.upgrade.action.RerunActionHandler
+                                            </impl>
+                                        </action-handler>
+                                        <style>Sapphire.Actuator.Button</style>
+                                        <horizontal-align>right</horizontal-align>
+                                    </actuator>
+                                </content>
+                                <weight>1</weight>
+                            </block>
+                            <block>
+                                <content>
+                                    <actuator>
+			                            <action-id>WelcomeNextAction</action-id>
+			                            <action>
+			                                <id>WelcomeNextAction</id>
+			                                <label>Next</label>
+			                            </action>
+			                            <action-handler>
+			                                <id>WelcomeNextAction</id>
+			                                <action>WelcomeNextAction</action>
+			                                <impl>com.liferay.ide.project.ui.upgrade.action.WelcomeNextActionHandler
+			                                </impl>
+			                            </action-handler>
+			                            <horizontal-align>right</horizontal-align>
+			                            <style>Sapphire.Actuator.Button</style>
+			                        </actuator>
+                                </content>
+                                <weight>1</weight>
+                            </block>
+                        </split-form>
 					</content>
 				</section>
 			</node>
@@ -41,14 +73,14 @@
 				<label>Config Source</label>
 				<section>
 					<content>
-						<property-editor>Location</property-editor>
+						<property-editor>SdkLocation</property-editor>
 						<property-editor>ProjectName</property-editor>
 						<property-editor>
 							<style>Sapphire.PropertyEditor.PopUpListField.Strict</style>
 							<property>Layout</property>
 						</property-editor>
 						<property-editor>
-							<property>LiferayRuntimeName</property>
+							<property>LiferayServerName</property>
 							<style>Sapphire.PropertyEditor.PopUpListField.Strict</style>
 							<action>
 								<id>NewLiferayRuntime</id>
@@ -58,8 +90,7 @@
 							<action-handler>
 								<action>NewLiferayRuntime</action>
 								<id>NewLiferayRuntimeHandler</id>
-								<impl>com.liferay.ide.project.ui.upgrade.action.CodeUpgradeNewLiferayRuntimeAction
-								</impl>
+								<impl>com.liferay.ide.project.ui.upgrade.action.CodeUpgradeNewLiferayServerAction</impl>
 							</action-handler>
 							<visible-when>${Layout=='Upgrade to liferay plugin sdk 7'}
 							</visible-when>
@@ -118,6 +149,27 @@
 							<block>
 								<content>
 									<actuator>
+										<action-id>ImportProjectAction</action-id>
+										<action>
+											<id>ImportProjectAction</id>
+											<label>Import</label>
+										</action>
+										<action-handler>
+											<id>ImportProjectAction</id>
+											<action>ImportProjectAction</action>
+											<impl>com.liferay.ide.project.ui.upgrade.action.ImportProjectActionHandler
+											</impl>
+										</action-handler>
+										<style>Sapphire.Actuator.Button</style>
+										<horizontal-align>right</horizontal-align>
+										<span>false</span>
+									</actuator>
+								</content>
+								<weight>1</weight>
+							</block>
+							<block>
+								<content>
+									<actuator>
 										<action-id>ImportProjectNextAction</action-id>
 										<action>
 											<id>ImportProjectNextAction</id>
@@ -144,32 +196,16 @@
 				<label>Descriptors</label>
 				<section>
 					<content>
-						<label>We will do:</label>
+						<label>We will do: Upgrade All Liferay Plugin project DTD files version to 7.0.</label>
+		                <custom>
+                            <scale-vertically>true</scale-vertically>
+		                    <class>com.liferay.ide.project.ui.upgrade.LiferayDescriptorUpgradeTableViewCustomPart</class>
+		                </custom>
 						<split-form>
 							<block>
 								<content>
 								</content>
-								<weight>8</weight>
-							</block>
-							<block>
-								<content>
-									<actuator>
-										<action-id>DescriptorsSkipAction</action-id>
-										<action>
-											<id>DescriptorsSkipAction</id>
-											<label>Skip</label>
-										</action>
-										<action-handler>
-											<id>DescriptorsSkipAction</id>
-											<action>DescriptorsSkipAction</action>
-											<impl>com.liferay.ide.project.ui.upgrade.action.DescriptorsSkipActionHandler
-											</impl>
-										</action-handler>
-										<style>Sapphire.Actuator.Button</style>
-										<horizontal-align>right</horizontal-align>
-									</actuator>
-								</content>
-								<weight>1</weight>
+								<weight>10</weight>
 							</block>
 							<block>
 								<content>
@@ -194,63 +230,9 @@
 						</split-form>
 					</content>
 				</section>
-				<visible-when>${Confirm == 'true' &amp;&amp; (HasPortlet == 'true' || HasHook == 'true' || HasServiceBuilder == 'true' || HasLayout == 'true')}</visible-when>
-			</node>
-			<node>
-				<label>Build Service</label>
-				<section>
-					<content>
-						<label>We will do:</label>
-						<split-form>
-							<block>
-								<content>
-								</content>
-								<weight>7</weight>
-							</block>
-							<block>
-								<content>
-									<actuator>
-										<action-id>BuildServiceAction</action-id>
-										<action>
-											<id>BuildServiceAction</id>
-											<label>Build Service</label>
-										</action>
-										<action-handler>
-											<id>BuildServiceAction</id>
-											<action>BuildServiceAction</action>
-											<impl>com.liferay.ide.project.ui.upgrade.action.BuildServiceActionHandler
-											</impl>
-										</action-handler>
-										<horizontal-align>right</horizontal-align>
-										<style>Sapphire.Actuator.Button</style>
-									</actuator>
-								</content>
-								<weight>2</weight>
-							</block>
-							<block>
-								<content>
-									<actuator>
-										<action-id>BuildServiceNextAction</action-id>
-										<action>
-											<id>BuildServiceNextAction</id>
-											<label>Next</label>
-										</action>
-										<action-handler>
-											<id>BuildServiceNextAction</id>
-											<action>BuildServiceNextAction</action>
-											<impl>com.liferay.ide.project.ui.upgrade.action.BuildServiceNextActionHandler
-											</impl>
-										</action-handler>
-										<horizontal-align>right</horizontal-align>
-										<style>Sapphire.Actuator.Button</style>
-									</actuator>
-								</content>
-								<weight>1</weight>
-							</block>
-						</split-form>
-					</content>
-				</section>
-				<visible-when>${Confirm == 'true' &amp;&amp; HasServiceBuilder == 'true'}</visible-when>
+				<visible-when>${Confirm == 'true' &amp;&amp; (HasPortlet == 'true'
+					|| HasHook == 'true' || HasServiceBuilder == 'true' || HasLayout ==
+					'true')}</visible-when>
 			</node>
 			<node>
 				<label>Find Breaking Changes</label>
@@ -306,47 +288,153 @@
 						</split-form>
 					</content>
 				</section>
-				<visible-when>${Confirm == 'true' &amp;&amp; (HasPortlet == 'true' || HasHook == 'true' || HasServiceBuilder == 'true')}</visible-when>
+				<visible-when>${Confirm == 'true' &amp;&amp; (HasPortlet == 'true'
+					|| HasHook == 'true' || HasServiceBuilder == 'true')}
+				</visible-when>
 			</node>
-            <node>
-                <label>Layout Template</label>
+			<node>
+                <label>Build Service</label>
                 <section>
                     <content>
-                        <label>We will do:</label>
-                        <actuator>
-                            <action-id>LayoutNextAction</action-id>
-                            <action>
-                                <id>LayoutNextAction</id>
-                                <label>Next</label>
-                            </action>
-                            <action-handler>
-                                <id>LayoutNextAction</id>
-                                <action>LayoutNextAction</action>
-                                <impl>com.liferay.ide.project.ui.upgrade.action.LayoutNextActionHandler
-                                </impl>
-                            </action-handler>
-                            <horizontal-align>right</horizontal-align>
-                            <style>Sapphire.Actuator.Button</style>
-                        </actuator>
+                        <label>We will do: delete shard-data-source-spring.xml and
+                            portlet-spring.xml under docroot/WEB-INF/src/META-INF of each
+                            selected project. Then run build-service</label>
+                        <split-form>
+                            <block>
+                                <content>
+                                </content>
+                                <weight>7</weight>
+                            </block>
+                            <block>
+                                <content>
+                                    <actuator>
+                                        <action-id>BuildServiceAction</action-id>
+                                        <action>
+                                            <id>BuildServiceAction</id>
+                                            <label>Build Service</label>
+                                        </action>
+                                        <action-handler>
+                                            <id>BuildServiceAction</id>
+                                            <action>BuildServiceAction</action>
+                                            <impl>com.liferay.ide.project.ui.upgrade.action.BuildServiceActionHandler
+                                            </impl>
+                                        </action-handler>
+                                        <horizontal-align>right</horizontal-align>
+                                        <style>Sapphire.Actuator.Button</style>
+                                    </actuator>
+                                </content>
+                                <weight>2</weight>
+                            </block>
+                            <block>
+                                <content>
+                                    <actuator>
+                                        <action-id>BuildServiceNextAction</action-id>
+                                        <action>
+                                            <id>BuildServiceNextAction</id>
+                                            <label>Next</label>
+                                        </action>
+                                        <action-handler>
+                                            <id>BuildServiceNextAction</id>
+                                            <action>BuildServiceNextAction</action>
+                                            <impl>com.liferay.ide.project.ui.upgrade.action.BuildServiceNextActionHandler
+                                            </impl>
+                                        </action-handler>
+                                        <horizontal-align>right</horizontal-align>
+                                        <style>Sapphire.Actuator.Button</style>
+                                    </actuator>
+                                </content>
+                                <weight>1</weight>
+                            </block>
+                        </split-form>
                     </content>
                 </section>
-                <visible-when>${Confirm == 'true' &amp;&amp; HasLayout == 'true'}</visible-when>
+                <visible-when>${Confirm == 'true' &amp;&amp; HasServiceBuilder ==
+                    'true'}</visible-when>
             </node>
+			<node>
+				<label>Layout Template</label>
+				<section>
+					<content>
+						<label>We will do: upgrade layout template</label>
+                        <custom>
+                            <class>com.liferay.ide.project.ui.upgrade.LiferayLayouttplUpgradeTableViewCustomPart</class>
+                            <scale-vertically>true</scale-vertically>
+                        </custom>
+						<split-form>
+							<block>
+								<weight>6</weight>
+							</block>
+							<block>
+								<weight>3</weight>
+							</block>
+							<block>
+								<content>
+									<actuator>
+										<action-handler>
+											<action>LayoutNextAction</action>
+											<id>LayoutNextAction</id>
+											<impl>com.liferay.ide.project.ui.upgrade.action.LayoutNextActionHandler
+											</impl>
+										</action-handler>
+										<action-id>LayoutNextAction</action-id>
+										<action>
+											<id>LayoutNextAction</id>
+											<label>Next</label>
+										</action>
+										<horizontal-align>right</horizontal-align>
+										<style>Sapphire.Actuator.Button</style>
+									</actuator>
+								</content>
+								<weight>1</weight>
+							</block>
+						</split-form>
+					</content>
+				</section>
+				<visible-when>${Confirm == 'true' &amp;&amp; HasLayout == 'true'}
+				</visible-when>
+			</node>
 			<node>
 				<label>Custom Jsp</label>
 				<section>
 					<content>
+						<label>We will do: convert jsp hook projects into fragments or modules and show results to compare between original and changed jsp files</label>
+                        <custom>
+                            <class>com.liferay.ide.project.ui.upgrade.ConvertedProjectTreesPart</class>
+                        </custom>
+                        <actuator>
+                            <action-handler>
+                                <action>CustomJspNextAction</action>
+                                <id>CustomJspNextAction</id>
+                                <impl>com.liferay.ide.project.ui.upgrade.action.CustomJspNextActionHandler</impl>
+                            </action-handler>
+                            <action-id>CustomJspNextAction</action-id>
+                            <action>
+                                <id>CustomJspNextAction</id>
+                                <label>Next</label>
+                            </action>
+                            <horizontal-align>right</horizontal-align>
+                            <style>Sapphire.Actuator.Button</style>
+                        </actuator>
+					</content>
+				</section>
+				<visible-when>${Confirm == 'true' &amp;&amp; HasHook == 'true' }
+				</visible-when>
+			</node>
+			<node>
+				<label>Ext</label>
+				<section>
+					<content>
 						<label>We will do:</label>
 						<actuator>
-							<action-id>CustomJspNextAction</action-id>
+							<action-id>ExtNextAction</action-id>
 							<action>
-								<id>CustomJspNextAction</id>
+								<id>ExtNextAction</id>
 								<label>Next</label>
 							</action>
 							<action-handler>
-								<id>CustomJspNextAction</id>
-								<action>CustomJspNextAction</action>
-								<impl>com.liferay.ide.project.ui.upgrade.action.CustomJspNextActionHandler
+								<id>ExtNextAction</id>
+								<action>ExtNextAction</action>
+								<impl>com.liferay.ide.project.ui.upgrade.action.ExtNextActionHandler
 								</impl>
 							</action-handler>
 							<horizontal-align>right</horizontal-align>
@@ -354,56 +442,34 @@
 						</actuator>
 					</content>
 				</section>
-				<visible-when>${Confirm == 'true' &amp;&amp; HasHook == 'true' }</visible-when>
+				<visible-when>${Confirm == 'true' &amp;&amp; HasExt == 'true'}
+				</visible-when>
 			</node>
 			<node>
-                <label>Ext</label>
-                <section>
-                    <content>
-                        <label>We will do:</label>
-                        <actuator>
-                            <action-id>ExtNextAction</action-id>
-                            <action>
-                                <id>ExtNextAction</id>
-                                <label>Next</label>
-                            </action>
-                            <action-handler>
-                                <id>ExtNextAction</id>
-                                <action>ExtNextAction</action>
-                                <impl>com.liferay.ide.project.ui.upgrade.action.ExtNextActionHandler
-                                </impl>
-                            </action-handler>
-                            <horizontal-align>right</horizontal-align>
-                            <style>Sapphire.Actuator.Button</style>
-                        </actuator>
-                    </content>
-                </section>
-                <visible-when>${Confirm == 'true' &amp;&amp; HasExt == 'true'}</visible-when>
-            </node>
-            <node>
-                <label>Theme</label>
-                <section>
-                    <content>
-                        <label>We will do:</label>
-                        <actuator>
-                            <action-id>ThemeNextAction</action-id>
-                            <action>
-                                <id>ThemeNextAction</id>
-                                <label>Next</label>
-                            </action>
-                            <action-handler>
-                                <id>ThemeNextAction</id>
-                                <action>ThemeNextAction</action>
-                                <impl>com.liferay.ide.project.ui.upgrade.action.ThemeNextActionHandler
-                                </impl>
-                            </action-handler>
-                            <horizontal-align>right</horizontal-align>
-                            <style>Sapphire.Actuator.Button</style>
-                        </actuator>
-                    </content>
-                </section>
-                <visible-when>${Confirm == 'true' &amp;&amp; HasTheme == 'true'}</visible-when>
-            </node>
+				<label>Theme</label>
+				<section>
+					<content>
+						<label>We will do:</label>
+						<actuator>
+							<action-id>ThemeNextAction</action-id>
+							<action>
+								<id>ThemeNextAction</id>
+								<label>Next</label>
+							</action>
+							<action-handler>
+								<id>ThemeNextAction</id>
+								<action>ThemeNextAction</action>
+								<impl>com.liferay.ide.project.ui.upgrade.action.ThemeNextActionHandler
+								</impl>
+							</action-handler>
+							<horizontal-align>right</horizontal-align>
+							<style>Sapphire.Actuator.Button</style>
+						</actuator>
+					</content>
+				</section>
+				<visible-when>${Confirm == 'true' &amp;&amp; HasTheme == 'true'}
+				</visible-when>
+			</node>
 			<node>
 				<label>Compile</label>
 				<section>
