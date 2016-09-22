@@ -26,15 +26,20 @@ import com.liferay.ide.project.core.upgrade.FileProblemsUtil;
 import com.liferay.ide.project.core.upgrade.MigrationProblems;
 import com.liferay.ide.project.core.upgrade.UpgradeAssistantSettingsUtil;
 import com.liferay.ide.project.core.upgrade.UpgradeProblems;
+import com.liferay.ide.project.core.util.ProjectUtil;
 import com.liferay.ide.project.ui.ProjectUI;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.WorkspaceJob;
@@ -221,13 +226,31 @@ public class MigrateProjectHandler extends AbstractHandler
                     final Migration m = context.getService( sr );
                     List<Problem> allProblems = null;
 
+                    boolean isSingleFile =
+                        locations.length == 1 && locations[0].toFile().exists() && locations[0].toFile().isFile();
+
                     for( int j = 0; j < locations.length; j++ )
                     {
                         allProblems = new ArrayList<>();
 
                         if( !override.isCanceled() )
                         {
-                            final List<Problem> problems = m.findProblems( locations[j].toFile(), override );
+                            List<Problem> problems = null;
+
+                            if( isSingleFile )
+                            {
+                                clearFileMarkers( locations[j].toFile() );
+
+                                Set<File> files = new HashSet<>();
+
+                                files.add( locations[j].toFile() );
+
+                                problems = m.findProblems( files, override );
+                            }
+                            else
+                            {
+                                problems = m.findProblems( locations[j].toFile(), override );
+                            }
 
                             for( Problem problem : problems )
                             {
@@ -281,6 +304,27 @@ public class MigrateProjectHandler extends AbstractHandler
 
                             if( index != -1 )
                             {
+                                if( isSingleFile )
+                                {
+                                    UpgradeProblems up = migrationProblemsList.get( index );
+
+                                    FileProblems[] problems = up.getProblems();
+
+                                    for( int n = 0; n < problems.length; n++ )
+                                    {
+                                        FileProblems fp = problems[n];
+
+                                        if( fp.getFile().getPath().equals( locations[0].toFile().getPath() ) )
+                                        {
+                                            problems[n] = fileProblemsList.get( 0 );
+
+                                            break;
+                                        }
+                                    }
+
+                                    migrationProblems.setProblems( problems );
+                                }
+
                                 migrationProblemsList.set( index, migrationProblems );
                             }
                             else
@@ -295,7 +339,28 @@ public class MigrateProjectHandler extends AbstractHandler
 
                             if( index != -1 )
                             {
-                                migrationProblemsList.remove( index );
+                                if( isSingleFile )
+                                {
+                                    MigrationProblems mp = migrationProblemsList.get( index );
+                                    FileProblems[] fps = mp.getProblems();
+                                    List<FileProblems> fpList = Arrays.asList( fps );
+                                    List<FileProblems> newFPList = new ArrayList<>();
+                                    for( FileProblems fp : fpList )
+                                    {
+                                        if( !fp.getFile().getPath().equals( locations[0].toFile().getPath() ) )
+                                        {
+                                            newFPList.add( fp );
+                                        }
+                                    }
+
+                                    mp.setProblems( newFPList.toArray( new FileProblems[0] ) );
+
+                                    migrationProblemsList.set( index, mp );
+                                }
+                                else
+                                {
+                                    migrationProblemsList.remove( index );
+                                }
                             }
                         }
 
@@ -326,6 +391,7 @@ public class MigrateProjectHandler extends AbstractHandler
 
         try
         {
+            Thread.sleep( 5000 );
             PlatformUI.getWorkbench().getProgressService().showInDialog( Display.getDefault().getActiveShell(), job );
         }
         catch( Exception e )
@@ -429,8 +495,7 @@ public class MigrateProjectHandler extends AbstractHandler
         return false;
     }
 
-    private int isAlreadyExist(
-        List<MigrationProblems> migrationProblemsList, String[] projectName, int projectIndex )
+    private int isAlreadyExist( List<MigrationProblems> migrationProblemsList, String[] projectName, int projectIndex )
     {
         int index = -1;
 
@@ -447,6 +512,28 @@ public class MigrateProjectHandler extends AbstractHandler
         }
 
         return index;
+    }
+
+    private void clearFileMarkers( File file )
+    {
+        IProject[] projects = ProjectUtil.getAllPluginsSDKProjects();
+
+        for( IProject project : projects )
+        {
+            String filePath = file.getPath().replaceAll( "\\\\", "/" );
+            String projectPath = project.getLocation().toString();
+            if( filePath.startsWith( projectPath ) )
+            {
+                int i = filePath.indexOf( projectPath ) + projectPath.length();
+                String projectFilePath = filePath.substring( i, filePath.length() );
+                IFile projectFile = project.getFile( projectFilePath );
+                if( projectFile.exists() )
+                {
+                    MarkerUtil.clearMarkers( projectFile, MigrationConstants.MARKER_TYPE, null );
+                }
+                break;
+            }
+        }
     }
 
 }

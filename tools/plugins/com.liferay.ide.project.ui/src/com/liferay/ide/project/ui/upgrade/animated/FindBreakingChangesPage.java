@@ -19,11 +19,13 @@ import com.liferay.blade.api.Problem;
 import com.liferay.ide.core.util.CoreUtil;
 import com.liferay.ide.project.core.upgrade.FileProblems;
 import com.liferay.ide.project.core.upgrade.UpgradeAssistantSettingsUtil;
+import com.liferay.ide.project.core.util.ProjectUtil;
 import com.liferay.ide.project.ui.ProjectUI;
 import com.liferay.ide.project.ui.migration.AutoCorrectAction;
 import com.liferay.ide.project.ui.migration.IgnoreAction;
 import com.liferay.ide.project.ui.migration.MarkDoneAction;
 import com.liferay.ide.project.ui.migration.MarkUndoneAction;
+import com.liferay.ide.project.ui.migration.MigrateProjectHandler;
 import com.liferay.ide.project.ui.migration.MigrationContentProvider;
 import com.liferay.ide.project.ui.migration.MigrationLabelProvider;
 import com.liferay.ide.project.ui.migration.MigrationProblemsContainer;
@@ -39,6 +41,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.viewers.ArrayContentProvider;
@@ -201,7 +208,7 @@ public class FindBreakingChangesPage extends Page implements IDoubleClickListene
             public void handleEvent( Event event )
             {
                 IViewPart view = UIUtil.findView( UpgradeView.ID );
-                new RunMigrationToolAction( "Run Migration Tool", view.getViewSite().getShell() ).run();;
+                new RunMigrationToolAction( "Run Migration Tool", view.getViewSite().getShell() ).run();
             }
         } );
 
@@ -264,13 +271,18 @@ public class FindBreakingChangesPage extends Page implements IDoubleClickListene
             @Override
             protected void setValue( Object element, Object value )
             {
+                Problem p = (Problem) element;
+
                 if( value == Boolean.TRUE )
                 {
-                    new MarkDoneAction().run( (Problem) element, _problemsViewer );
+
+                    new MarkDoneAction().run( p, _problemsViewer );
+
+
                 }
                 else
                 {
-                    new MarkUndoneAction().run( (Problem) element, _problemsViewer );
+                    new MarkUndoneAction().run( p, _problemsViewer );
                 }
             }
         } );
